@@ -55,6 +55,11 @@ greeb {
       }
     }
 
+    messageReceived(/^!echo/) {
+      respond(content)
+    }
+
+
     messageReceived(/^!resetregion/) {
       List<IRole> currentRoles = user.getRolesForGuild(guild)
 
