@@ -1,0 +1,13 @@
+{
+  "mainChannelName": "allchat",
+  "welcomeChannelName": "welcome",
+  "regions": [
+    "NA",
+    "EUW",
+    "EUNE",
+    "LAN",
+    "LAS",
+    "BR",
+    "OCR"
+  ]
+}

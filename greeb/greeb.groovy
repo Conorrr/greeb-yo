@@ -1,4 +1,3 @@
-import sx.blah.discord.handle.impl.events.ReadyEvent
 import sx.blah.discord.handle.obj.IChannel
 import sx.blah.discord.handle.obj.IGuild
 import sx.blah.discord.handle.obj.IRole
@@ -7,10 +6,11 @@ import static io.greeb.core.dsl.DSL.greeb
 
 greeb {
   credentials new File('discord.token').text
+  properties("properties.json")
 
-  def mainChannelName = 'allchat'
-  def welcomeChannelName = 'welcome'
-  def regions = ["NA", "EUW", "EUNE", "LAN", "LAS", "BR", "OCR"]
+  def mainChannelName = properties.mainChannelName
+  def welcomeChannelName = properties.welcomeChannelName
+  def regions = properties.regions
 
   List<IRole> roles
   IGuild guild
@@ -21,14 +21,13 @@ greeb {
 
     guildCreate {
       // currently only support for 1 guild
-      guild = event.client.guilds[0]
+      guild = event.guild
       roles = guild.roles
       mainChannel = guild.channels.find { it.name == mainChannelName }
       welcomeChannel = guild.channels.find { it.name == welcomeChannelName }
     }
 
     userJoin {
-      def user = event.user
       mainChannel.sendMessage("""\
         Hey <@!$user.ID>
         Welcome to Keep Calm.
@@ -39,7 +38,6 @@ greeb {
 
     regions.each { region ->
       messageReceived(/^!$region/, mainChannelName) {
-        def user = event.message.author
         List<IRole> currentRoles = user.getRolesForGuild(guild)
 
         def alreadyAssigned = currentRoles.find { regions.contains(it.name) }
@@ -51,13 +49,10 @@ greeb {
         } else {
           respond("<@!$user.ID> you are already assigned to $alreadyAssigned.name. If you wish to change region please use `!resetregion` if you wish to change your region use !NA, !EUW, !EUNE, !LAN, !LAS, !BR or !OCR.")
         }
-
-        void // work around for a greeb bug
       }
     }
 
     messageReceived(/^!resetregion/) {
-      def user = event.message.author
       List<IRole> currentRoles = user.getRolesForGuild(guild)
 
       def currentRegion = currentRoles.find { regions.contains(it.name) }
