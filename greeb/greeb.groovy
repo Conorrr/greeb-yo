@@ -1,15 +1,18 @@
+import io.greeb.core.discord.DiscordMatchers
 import sx.blah.discord.handle.obj.IChannel
 import sx.blah.discord.handle.obj.IGuild
 import sx.blah.discord.handle.obj.IRole
 
+import static io.greeb.core.discord.DiscordMatchers.all
+import static io.greeb.core.discord.DiscordMatchers.privateChat
 import static io.greeb.core.dsl.DSL.greeb
 
 greeb {
   credentials new File('discord.token').text
   properties("properties.json")
 
-  def mainChannelName = properties.mainChannelName
-  def welcomeChannelName = properties.welcomeChannelName
+  String mainChannelName = properties.mainChannelName
+  String welcomeChannelName = properties.welcomeChannelName
   def regions = properties.regions
 
   List<IRole> roles
@@ -19,7 +22,7 @@ greeb {
 
   consumers {
 
-    guildCreate {
+    guildCreate(all()) {
       // currently only support for 1 guild
       guild = event.guild
       roles = guild.roles
@@ -27,7 +30,7 @@ greeb {
       welcomeChannel = guild.channels.find { it.name == welcomeChannelName }
     }
 
-    userJoin {
+    userJoin(all()) {
       mainChannel.sendMessage("""\
         Hey <@!$user.ID>
         Welcome to Keep Calm.
@@ -37,7 +40,7 @@ greeb {
     }
 
     regions.each { region ->
-      messageReceived(/^!$region/, mainChannelName) {
+      privateMessageReceived(/^!$region/) chain messageReceived(/^!$region/, mainChannelName) {
         List<IRole> currentRoles = user.getRolesForGuild(guild)
 
         def alreadyAssigned = currentRoles.find { regions.contains(it.name) }
