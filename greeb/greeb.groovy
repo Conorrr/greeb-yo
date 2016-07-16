@@ -1,3 +1,6 @@
+import groovy.sql.Sql
+import io.greeb.sql.LiquibaseService
+import io.greeb.sql.SqlModule
 import sx.blah.discord.handle.obj.IChannel
 import sx.blah.discord.handle.obj.IGuild
 import sx.blah.discord.handle.obj.IRole
@@ -15,6 +18,14 @@ greeb {
   List<IRole> roles
   IGuild guild
   IChannel mainChannel
+
+  bindings {
+    module SqlModule
+  }
+
+  onAppStart { Sql sql, LiquibaseService liquibaseService ->
+    liquibaseService.runLiquibase()
+  }
 
   consumers {
 

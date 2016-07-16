@@ -27,18 +27,23 @@ repositories {
 dependencies {
   compile 'org.codehaus.groovy:groovy-all:2.4.4'
   compile 'greeb.io:greeb-core:1.0-SNAPSHOT'
+
+  compile 'com.h2database:h2:1.4.192'
+  compile 'com.zaxxer:HikariCP:2.4.7'
+  compile 'org.liquibase:liquibase-core:3.5.1'
+  compile 'org.liquibase:liquibase-groovy-dsl:1.2.1'
 }
 
 sourceSets {
   main {
     groovy {
-      srcDirs = ['greeb']
+      srcDirs = ['greeb', 'src/main/groovy']
     }
   }
 
   test {
     groovy {
-      srcDirs = ['test/groovy']
+      srcDirs = ['src/test/groovy']
     }
   }
 }

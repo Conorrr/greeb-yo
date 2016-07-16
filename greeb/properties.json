@@ -9,5 +9,10 @@
     "LAS",
     "BR",
     "OCR"
-  ]
+  ],
+  "db":{
+    "username":"greeb",
+    "password":"uqRjordlyF06IQnYBkcm",
+    "location": "~/greebdb"
+  }
 }
