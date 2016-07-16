@@ -1,10 +1,8 @@
-import io.greeb.core.discord.DiscordMatchers
 import sx.blah.discord.handle.obj.IChannel
 import sx.blah.discord.handle.obj.IGuild
 import sx.blah.discord.handle.obj.IRole
 
 import static io.greeb.core.discord.DiscordMatchers.all
-import static io.greeb.core.discord.DiscordMatchers.privateChat
 import static io.greeb.core.dsl.DSL.greeb
 
 greeb {
@@ -55,10 +53,9 @@ greeb {
       }
     }
 
-    messageReceived(/^!echo/) {
-      respond(content)
+    messageReceived(/^!ping/) {
+      respond("pong")
     }
-
 
     messageReceived(/^!resetregion/) {
       List<IRole> currentRoles = user.getRolesForGuild(guild)
