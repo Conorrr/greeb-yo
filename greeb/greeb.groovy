@@ -51,7 +51,7 @@ greeb {
       client.getOrCreatePMChannel(user).sendMessage(message + regionBullets)
     }
 
-    messageReceived(/^!resetregion/) {
+    messageReceived(/(?i)^!resetregion/) {
       List<IRole> currentRoles = user.getRolesForGuild(guild)
 
       def currentRegion = currentRoles.find { regions.contains(it.name) }
@@ -69,7 +69,7 @@ greeb {
     }
 
     regions.each { region ->
-      messageReceived(/^!$region/) {
+      messageReceived(/(?i)^!$region/) {
         List<IRole> currentRoles = user.getRolesForGuild(guild)
 
         def alreadyAssigned = currentRoles.find { regions.contains(it.name) }
