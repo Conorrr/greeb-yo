@@ -1,6 +1,6 @@
 {
-  "mainChannelName": "allchat",
-  "welcomeChannelName": "welcome",
+  "mainChannelId": "199590758079135746",
+  "starterRole":"203869575031291904",
   "regions": [
     "NA",
     "EUW",
