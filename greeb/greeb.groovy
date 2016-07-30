@@ -1,11 +1,19 @@
+import com.google.inject.matcher.Matchers
 import groovy.sql.Sql
+import io.greeb.core.discord.DiscordMatchers
 import io.greeb.sql.LiquibaseService
 import io.greeb.sql.SqlModule
+import io.greeb.yo.dataServices.DataServiceModule
+import io.greeb.yo.dataServices.RegionDataService
+import sx.blah.discord.handle.impl.events.MessageReceivedEvent
 import sx.blah.discord.handle.obj.IChannel
 import sx.blah.discord.handle.obj.IGuild
 import sx.blah.discord.handle.obj.IRole
 
 import static io.greeb.core.discord.DiscordMatchers.all
+import static io.greeb.core.discord.DiscordMatchers.channelMatches
+import static io.greeb.core.discord.DiscordMatchers.channelNameMatches
+import static io.greeb.core.discord.DiscordMatchers.messageMatches
 import static io.greeb.core.dsl.DSL.greeb
 
 greeb {
@@ -13,7 +21,7 @@ greeb {
   properties("properties.json")
 
   String mainChannelId = properties.mainChannelId
-  def regions = properties.regions
+  Map<String, String> regions
 
   List<IRole> roles
   IGuild guild
@@ -21,6 +29,7 @@ greeb {
 
   bindings {
     module SqlModule
+    module DataServiceModule
   }
 
   onAppStart { Sql sql, LiquibaseService liquibaseService ->
@@ -28,20 +37,23 @@ greeb {
   }
 
   consumers {
+    def regionBullets
 
-    // HELPER METHODS  //
-    def regionBullets = regions.inject("") { result, region -> result + "\n• !$region" }
-    /////////////////////
+    def generateBullets = {
+      regionBullets = regions.keySet().inject("") { result, region -> result + "\n• !$region" }
+    }
 
     messageReceived(/^!ping/) {
       respond("pong")
     }
 
-    guildCreate(all()) {
+    guildCreate(all()) { RegionDataService regionDS ->
       // currently only support for 1 guild
+      regions = regionDS.all
       guild = event.guild
       roles = guild.roles
       mainChannel = guild.getChannelByID(mainChannelId)
+      generateBullets()
     }
 
     userJoin(all()) {
@@ -65,7 +77,7 @@ greeb {
     messageReceived(/(?i)^!resetregion/) {
       List<IRole> currentRoles = user.getRolesForGuild(guild)
 
-      def currentRegion = currentRoles.find { regions.contains(it.name) }
+      def currentRegion = currentRoles.find { regions.keySet().contains(it.name) }
 
       def message
 
@@ -79,20 +91,61 @@ greeb {
       client.getOrCreatePMChannel(user).sendMessage(message + regionBullets)
     }
 
-    regions.each { region ->
-      messageReceived(/(?i)^!$region/) {
+    def listenForRegion = { regionName ->
+      messageReceived(/(?i)^!$regionName/) {
         List<IRole> currentRoles = user.getRolesForGuild(guild)
 
-        def alreadyAssigned = currentRoles.find { regions.contains(it.name) }
+        def alreadyAssigned = currentRoles.find { regions.keySet().contains(it.name) }
 
         if (!alreadyAssigned) {
-          def newRole = guild.getRoles().find { it.name == region }
+          def newRole = guild.getRoles().find { it.name == regionName }
           guild.editUserRoles(user, (currentRoles + newRole) as IRole[])
-          client.getOrCreatePMChannel(user).sendMessage("You are now assigned to `$region`")
+          client.getOrCreatePMChannel(user).sendMessage("You are now assigned to `$regionName`")
         } else {
           client.getOrCreatePMChannel(user).sendMessage("You are already assigned to $alreadyAssigned.name. If you wish to change region please use `!resetregion` if you wish to change your region use $regionBullets.")
         }
       }
+    }
+
+    regions.each { regionName, regionId ->
+      listenForRegion(regionName)
+    }
+
+    messageReceived(/^!createRegion ([A-Z]{2,5})$/, 'bot-console') { RegionDataService regionDs ->
+      def newRole = guild.getRoles().find({ it.name == parts[1] })
+
+      if (!newRole){
+        return respond ("Role `${parts[1]}` needs to be created in discord first.")
+      }
+
+      if (regions.find { it.key == newRole.name }) {
+        return respond("`$newRole.name` already exists as a region")
+      }
+
+      regionDs.insert(newRole.name, newRole.ID, user.name, user.ID)
+
+      regions[newRole.name] = newRole.ID
+      listenForRegion(newRole.name)
+      generateBullets()
+
+      respond("Region created: $newRole.name")
+    }
+
+    messageReceived(/^!deleteRegion ([A-Z]{2,5})$/, 'bot-console') { RegionDataService regionDS ->
+      def regionToDelete = parts[1]
+      if (!regions[regionToDelete]) {
+        return respond("`${parts[1]}` is not a region")
+      }
+
+      unregister("!$regionToDelete")
+
+      regionDS.delete(regionToDelete)
+
+      regions.remove(regionToDelete)
+
+      generateBullets()
+
+      respond("Region deleted: $regionToDelete")
     }
 
   }
