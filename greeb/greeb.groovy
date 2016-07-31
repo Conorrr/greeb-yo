@@ -1,8 +1,10 @@
 import com.google.inject.matcher.Matchers
+import groovy.json.JsonOutput
 import groovy.sql.Sql
 import io.greeb.core.discord.DiscordMatchers
 import io.greeb.sql.LiquibaseService
 import io.greeb.sql.SqlModule
+import io.greeb.yo.dataServices.BanWordDataService
 import io.greeb.yo.dataServices.DataServiceModule
 import io.greeb.yo.dataServices.RegionDataService
 import sx.blah.discord.handle.impl.events.MessageReceivedEvent
@@ -11,10 +13,11 @@ import sx.blah.discord.handle.obj.IGuild
 import sx.blah.discord.handle.obj.IRole
 
 import static io.greeb.core.discord.DiscordMatchers.all
-import static io.greeb.core.discord.DiscordMatchers.channelMatches
 import static io.greeb.core.discord.DiscordMatchers.channelNameMatches
 import static io.greeb.core.discord.DiscordMatchers.combine
 import static io.greeb.core.discord.DiscordMatchers.messageMatches
+import static io.greeb.core.discord.DiscordMatchers.not
+import static io.greeb.core.discord.DiscordMatchers.privateChat
 import static io.greeb.core.dsl.DSL.greeb
 
 greeb {
@@ -22,11 +25,15 @@ greeb {
   properties("properties.json")
 
   String mainChannelId = properties.mainChannelId
+  String consoleChannelId = properties.consoleChannelId
+
   Map<String, String> regions
+  List<String> banWords
 
   List<IRole> roles
   IGuild guild
   IChannel mainChannel
+  IChannel consoleChannel
 
   bindings {
     module SqlModule
@@ -42,6 +49,10 @@ greeb {
 
     def generateBullets = {
       regionBullets = regions.keySet().inject("") { result, region -> result + "\n• !$region" }
+    }
+
+    def console = { String message ->
+      consoleChannel.sendMessage(message)
     }
 
     def listenForRegion = { regionName ->
@@ -60,21 +71,40 @@ greeb {
       }
     }
 
+    def listenForBanWord = { banWord ->
+      messageReceived(combine(not(privateChat()), not(channelNameMatches('bot-console')), messageMatches(/(?i)(^|\s)$banWord(\s|$)/))) {
+        // delete message
+        message.delete()
+
+        // pm the user
+        client.getOrCreatePMChannel(user).sendMessage("your message `$content` has removed from <#$message.channel.ID>. If you think this is a mistake please contact the mods")
+
+        // post a line to console
+        console("message `$content` by <@$user.ID> removed from <#$message.channel.ID>")
+      }
+    }
+
     messageReceived(/^!ping/) {
       respond("pong")
     }
 
-    guildCreate(all()) { RegionDataService regionDS ->
+    guildCreate(all()) { RegionDataService regionDS, BanWordDataService banWordDs ->
       // currently only support for 1 guild
       regions = regionDS.all
+      banWords = banWordDs.all
+
       guild = event.guild
       roles = guild.roles
       mainChannel = guild.getChannelByID(mainChannelId)
+      consoleChannel = guild.getChannelByID(consoleChannelId)
+
       generateBullets()
 
       regions.each { regionName, regionId ->
         listenForRegion(regionName)
       }
+
+      banWords.each { banWord -> listenForBanWord(banWord) }
     }
 
     userJoin(all()) {
@@ -174,6 +204,32 @@ greeb {
         • `!createRegion [REGION]` - creates a new region, can be 2-5 characters
         • `!deleteRegion [REGION]` - deletes region
         • `regionstats` - lists the number of users in each region'''.stripIndent())
+    }
+
+    // add banword
+    messageReceived(/(?i)^!addBanWord [a-z]*$/, 'bot-console') { BanWordDataService banWordDs ->
+      String banWord = parts[1]
+
+      listenForBanWord(banWord)
+
+      banWordDs.insert(banWord, user.ID, user.name)
+      respond("banword `$banWord` added to list")
+    }
+
+    // remove banword
+    messageReceived(/(?i)^!removeBanWord [a-z]*$/, 'bot-console') { BanWordDataService banWordDs ->
+      String banWord = parts[1]
+
+      unregister(banWord)
+
+      banWordDs.delete(banWord)
+      respond("banword `$banWord` removed from list")
+    }
+
+    // list banwords
+    messageReceived(/(?i)^!banWords/, 'bot-console') { BanWordDataService banWordDs ->
+      def banWordList = banWordDs.all.collect { "• $it" }.join('\n')
+      respond('\n' + banWordList)
     }
 
   }

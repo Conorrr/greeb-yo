@@ -7,5 +7,6 @@ class DataServiceModule extends AbstractModule {
   @Override
   protected void configure() {
     bind(RegionDataService)
+    bind(BanWordDataService)
   }
 }
