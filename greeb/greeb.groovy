@@ -13,6 +13,7 @@ import sx.blah.discord.handle.obj.IRole
 import static io.greeb.core.discord.DiscordMatchers.all
 import static io.greeb.core.discord.DiscordMatchers.channelMatches
 import static io.greeb.core.discord.DiscordMatchers.channelNameMatches
+import static io.greeb.core.discord.DiscordMatchers.combine
 import static io.greeb.core.discord.DiscordMatchers.messageMatches
 import static io.greeb.core.dsl.DSL.greeb
 
@@ -43,6 +44,22 @@ greeb {
       regionBullets = regions.keySet().inject("") { result, region -> result + "\n• !$region" }
     }
 
+    def listenForRegion = { regionName ->
+      messageReceived(/(?i)^!$regionName/) {
+        List<IRole> currentRoles = user.getRolesForGuild(guild)
+
+        def alreadyAssigned = currentRoles.find { regions.keySet().contains(it.name) }
+
+        if (!alreadyAssigned) {
+          def newRole = guild.getRoles().find { it.name == regionName }
+          guild.editUserRoles(user, (currentRoles + newRole) as IRole[])
+          client.getOrCreatePMChannel(user).sendMessage("You are now assigned to `$regionName`")
+        } else {
+          client.getOrCreatePMChannel(user).sendMessage("You are already assigned to $alreadyAssigned.name. If you wish to change region please use `!resetregion` if you wish to change your region use $regionBullets.")
+        }
+      }
+    }
+
     messageReceived(/^!ping/) {
       respond("pong")
     }
@@ -54,6 +71,10 @@ greeb {
       roles = guild.roles
       mainChannel = guild.getChannelByID(mainChannelId)
       generateBullets()
+
+      regions.each { regionName, regionId ->
+        listenForRegion(regionName)
+      }
     }
 
     userJoin(all()) {
@@ -63,12 +84,12 @@ greeb {
       guild.editUserRoles(user, (currentRoles + newRole) as IRole[])
 
       mainChannel.sendMessage("""\
-        Welcome to Calm Yo' <@!$user.ID>  - Feel free to make games, and get to know everyone. If you need any help, give Yo' Team a shout!
+        Welcome to Calm Yo' <@!$user.ID> - Feel free to make games, and get to know everyone. If you need any help, give Yo' Team a shout!
 
         GL & HF 😃""".stripIndent())
     }
 
-    messageReceived(/(?i)^!regions/) {
+    messageReceived(/(?i)^!regions$/) {
       def message = "Here is a list of region tags you can choose from, choose wisely! \nPlease reply to this message with:"
 
       client.getOrCreatePMChannel(user).sendMessage(message + regionBullets)
@@ -91,31 +112,11 @@ greeb {
       client.getOrCreatePMChannel(user).sendMessage(message + regionBullets)
     }
 
-    def listenForRegion = { regionName ->
-      messageReceived(/(?i)^!$regionName/) {
-        List<IRole> currentRoles = user.getRolesForGuild(guild)
-
-        def alreadyAssigned = currentRoles.find { regions.keySet().contains(it.name) }
-
-        if (!alreadyAssigned) {
-          def newRole = guild.getRoles().find { it.name == regionName }
-          guild.editUserRoles(user, (currentRoles + newRole) as IRole[])
-          client.getOrCreatePMChannel(user).sendMessage("You are now assigned to `$regionName`")
-        } else {
-          client.getOrCreatePMChannel(user).sendMessage("You are already assigned to $alreadyAssigned.name. If you wish to change region please use `!resetregion` if you wish to change your region use $regionBullets.")
-        }
-      }
-    }
-
-    regions.each { regionName, regionId ->
-      listenForRegion(regionName)
-    }
-
     messageReceived(/^!createRegion ([A-Z]{2,5})$/, 'bot-console') { RegionDataService regionDs ->
       def newRole = guild.getRoles().find({ it.name == parts[1] })
 
-      if (!newRole){
-        return respond ("Role `${parts[1]}` needs to be created in discord first.")
+      if (!newRole) {
+        return respond("Role `${parts[1]}` needs to be created in discord first.")
       }
 
       if (regions.find { it.key == newRole.name }) {
@@ -146,6 +147,33 @@ greeb {
       generateBullets()
 
       respond("Region deleted: $regionToDelete")
+    }
+
+    messageReceived(/(?i)^!regionstats$/, 'bot-console') {
+      guild.getUsers().get(0).getRolesForGuild(guild)
+
+      respond(guild.users
+              .groupBy { it.getRolesForGuild(guild).find { role -> regions.containsKey(role.name) } ?: 'NONE' }
+              .collect { region, users -> "• !$region - ${users.size()}" }
+              .join('\n'))
+    }
+
+    messageReceived(combine(messageMatches(/(?i)^!help/), { MessageReceivedEvent e -> e.message.channel.name != 'bot-console' })) {
+      respond('''\n\
+        • `!ping` - check if the bot is working
+        • `!regions` - get a list of regions
+        • `!resetregion` - remove assigned region role'''.stripIndent())
+    }
+
+    messageReceived(/(?i)^!help/, 'bot-console') {
+      respond('''\n\
+        • `!ping` - check if the bot is working
+        • `!regions` - get a list of regions
+        • `!resetregion` - remove assigned region role
+        -- admin commands (only work in bot-console)
+        • `!createRegion [REGION]` - creates a new region, can be 2-5 characters
+        • `!deleteRegion [REGION]` - deletes region
+        • `regionstats` - lists the number of users in each region'''.stripIndent())
     }
 
   }
