@@ -203,7 +203,10 @@ greeb {
         -- admin commands (only work in bot-console)
         • `!createRegion [REGION]` - creates a new region, can be 2-5 characters
         • `!deleteRegion [REGION]` - deletes region
-        • `regionstats` - lists the number of users in each region'''.stripIndent())
+        • `regionstats` - lists the number of users in each region
+        • `banWords` - lists all words on the block list
+        • `addBanWord [WORD]` - adds word to block list. If that word appears in any message the message will be deleted
+        • `removeBanWord [WORD] - removes word from block list` -'''.stripIndent())
     }
 
     // add banword
