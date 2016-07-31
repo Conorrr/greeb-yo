@@ -6,7 +6,7 @@ import static io.greeb.core.discord.DiscordMatchers.all
 import static io.greeb.core.dsl.DSL.greeb
 
 greeb {
-  credentials "MjAzNzk0MzU2MzI5NTEyOTYw.CmvR0Q.wJpaCL1mc17scDAuv7MgMPZFSBU"
+  credentials new File('discord.token').text
 
   consumers {
 
