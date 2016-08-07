@@ -1,8 +1,9 @@
 {
   "mainChannelId": "199590758079135746",
-  "starterRole":"203869575031291904",
+  "starterRole": "203869575031291904",
   "consoleChannelId": "208710840101240832",
   "gamingNewsChannelId": "209298844704309248",
+  "botAdminRoleID": "211822822811500544",
   "regions": [
     "NA",
     "EUW",
@@ -12,9 +13,9 @@
     "BR",
     "OCE"
   ],
-  "db":{
-    "username":"greeb",
-    "password":"uqRjordlyF06IQnYBkcm",
+  "db": {
+    "username": "greeb",
+    "password": "uqRjordlyF06IQnYBkcm",
     "location": "~/greebdb"
   }
 }

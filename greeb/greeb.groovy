@@ -10,6 +10,7 @@ import sx.blah.discord.handle.impl.events.MessageReceivedEvent
 import sx.blah.discord.handle.obj.IChannel
 import sx.blah.discord.handle.obj.IGuild
 import sx.blah.discord.handle.obj.IRole
+import sx.blah.discord.handle.obj.IUser
 
 import static io.greeb.core.discord.DiscordMatchers.*
 import static io.greeb.core.dsl.DSL.greeb
@@ -30,6 +31,14 @@ greeb {
   IChannel mainChannel
   IChannel consoleChannel
   IChannel gamingNewsChannel
+
+  def hasRole = { IUser user, String roleId ->
+    guild.getRolesForUser(user).any { it.ID == roleId }
+  }
+
+  def isAdmin = { MessageReceivedEvent event ->
+    hasRole(event.message.author, properties.botAdminRoleID)
+  }
 
   bindings {
     module SqlModule
@@ -140,7 +149,7 @@ greeb {
       client.getOrCreatePMChannel(user).sendMessage(message + regionBullets)
     }
 
-    messageReceived(/(?i)^!createRegion ([A-Z]{2,5})$/, 'bot-console') { RegionDataService regionDs ->
+    messageReceived(/(?i)^!createRegion ([A-Z]{2,5})$/, 'bot-console', isAdmin) { RegionDataService regionDs ->
       def newRegionName = parts[1].toUpperCase()
       def newRole = guild.getRoles().find({ it.name == newRegionName })
 
@@ -161,8 +170,8 @@ greeb {
 
       respond("Region created: $newRole.name")
     }
-!
-    messageReceived(/(?i)^!deleteRegion ([A-Z]{2,5})$/, 'bot-console') { RegionDataService regionDS ->
+
+    messageReceived(/(?i)^!deleteRegion ([A-Z]{2,5})$/, 'bot-console', isAdmin) { RegionDataService regionDS ->
       def regionToDelete = parts[1]
       if (!regions[regionToDelete]) {
         return respond("`${parts[1]}` is not a region")
@@ -201,15 +210,17 @@ greeb {
         • `!regions` - get a list of regions
         • `!resetregion` - remove assigned region role
         -- admin commands (only work in bot-console)
-        • `!createRegion [REGION]` - creates a new region, can be 2-5 characters
-        • `!deleteRegion [REGION]` - deletes region
+        • `!createRegion [REGION]` - * creates a new region, can be 2-5 characters
+        • `!deleteRegion [REGION]` - * deletes region
         • `regionstats` - lists the number of users in each region
         • `!banWords` - lists all words on the block list
         • `!addBanWord [WORD]` - adds word to block list. If that word appears in any message the message will be deleted
         • `!removeBanWord [WORD]` - removes word from block list
-        • `!addFeed [FEED URL]` - adds a new feed to RSS (currently only supports a small subset of feed formats)
+        • `!addFeed [FEED URL]` - * adds a new feed to RSS (currently only supports a small subset of feed formats)
         • `!listFeeds` - Lists all current feeds and their IDs
-        • `!removeFeed [FEED ID]` - removes an RSS feed'''.stripIndent())
+        • `!removeFeed [FEED ID]` - * removes an RSS feed
+
+        * Admin role only'''.stripIndent())
     }
 
     messageReceived(/(?i)^!addBanWord [a-z]*$/, 'bot-console') { BanWordDataService banWordDs ->
@@ -235,7 +246,7 @@ greeb {
       respond('\n' + banWordList)
     }
 
-    messageReceived(/(?i)^!addFeed https?:\/\/.*$/, 'bot-console') { RSSDataService rssDS ->
+    messageReceived(/(?i)^!addFeed https?:\/\/.*$/, 'bot-console', isAdmin) { RSSDataService rssDS ->
       String feedurl = parts[1]
 
       rssDS.addFeed(feedurl, user.ID, user.name)
@@ -251,7 +262,7 @@ greeb {
       respond(response)
     }
 
-    messageReceived(/(?i)^!removeFeed \d+$/, 'bot-console') { RSSDataService rssDS ->
+    messageReceived(/(?i)^!removeFeed \d+$/, 'bot-console', isAdmin) { RSSDataService rssDS ->
       Integer feedId = parts[1].toInteger()
 
       rssDS.delete(feedId)
