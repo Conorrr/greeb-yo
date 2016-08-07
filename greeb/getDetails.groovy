@@ -1,7 +1,3 @@
-import sx.blah.discord.handle.obj.IChannel
-import sx.blah.discord.handle.obj.IGuild
-import sx.blah.discord.handle.obj.IRole
-
 import static io.greeb.core.discord.DiscordMatchers.all
 import static io.greeb.core.dsl.DSL.greeb
 

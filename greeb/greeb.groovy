@@ -1,23 +1,17 @@
-import com.google.inject.matcher.Matchers
-import groovy.json.JsonOutput
 import groovy.sql.Sql
-import io.greeb.core.discord.DiscordMatchers
 import io.greeb.sql.LiquibaseService
 import io.greeb.sql.SqlModule
 import io.greeb.yo.dataServices.BanWordDataService
 import io.greeb.yo.dataServices.DataServiceModule
 import io.greeb.yo.dataServices.RegionDataService
+import io.greeb.yo.dataServices.rss.RSSDataService
+import io.greeb.yo.dataServices.rss.RSSService
 import sx.blah.discord.handle.impl.events.MessageReceivedEvent
 import sx.blah.discord.handle.obj.IChannel
 import sx.blah.discord.handle.obj.IGuild
 import sx.blah.discord.handle.obj.IRole
 
-import static io.greeb.core.discord.DiscordMatchers.all
-import static io.greeb.core.discord.DiscordMatchers.channelNameMatches
-import static io.greeb.core.discord.DiscordMatchers.combine
-import static io.greeb.core.discord.DiscordMatchers.messageMatches
-import static io.greeb.core.discord.DiscordMatchers.not
-import static io.greeb.core.discord.DiscordMatchers.privateChat
+import static io.greeb.core.discord.DiscordMatchers.*
 import static io.greeb.core.dsl.DSL.greeb
 
 greeb {
@@ -26,6 +20,7 @@ greeb {
 
   String mainChannelId = properties.mainChannelId
   String consoleChannelId = properties.consoleChannelId
+  String gamingNewsChannelId = properties.gamingNewsChannelId
 
   Map<String, String> regions
   List<String> banWords
@@ -34,6 +29,7 @@ greeb {
   IGuild guild
   IChannel mainChannel
   IChannel consoleChannel
+  IChannel gamingNewsChannel
 
   bindings {
     module SqlModule
@@ -88,7 +84,7 @@ greeb {
       respond("pong")
     }
 
-    guildCreate(all()) { RegionDataService regionDS, BanWordDataService banWordDs ->
+    guildCreate(all()) { RegionDataService regionDS, BanWordDataService banWordDs, RSSService rssService ->
       // currently only support for 1 guild
       regions = regionDS.all
       banWords = banWordDs.all
@@ -97,6 +93,9 @@ greeb {
       roles = guild.roles
       mainChannel = guild.getChannelByID(mainChannelId)
       consoleChannel = guild.getChannelByID(consoleChannelId)
+      gamingNewsChannel = guild.getChannelByID(gamingNewsChannelId)
+
+      rssService.start(gamingNewsChannel)
 
       generateBullets()
 
@@ -204,12 +203,14 @@ greeb {
         • `!createRegion [REGION]` - creates a new region, can be 2-5 characters
         • `!deleteRegion [REGION]` - deletes region
         • `regionstats` - lists the number of users in each region
-        • `banWords` - lists all words on the block list
-        • `addBanWord [WORD]` - adds word to block list. If that word appears in any message the message will be deleted
-        • `removeBanWord [WORD] - removes word from block list` -'''.stripIndent())
+        • `!banWords` - lists all words on the block list
+        • `!addBanWord [WORD]` - adds word to block list. If that word appears in any message the message will be deleted
+        • `!removeBanWord [WORD] - removes word from block list`
+        • `!addFeed [FEED URL]` - adds a new feed to RSS (currently only supports a small subset of feed formats)
+        • `!listFeeds` - Lists all current feeds and their IDs
+        • `!removeFeed [FEED ID]` - removes an RSS feed'''.stripIndent())
     }
 
-    // add banword
     messageReceived(/(?i)^!addBanWord [a-z]*$/, 'bot-console') { BanWordDataService banWordDs ->
       String banWord = parts[1]
 
@@ -219,7 +220,6 @@ greeb {
       respond("banword `$banWord` added to list")
     }
 
-    // remove banword
     messageReceived(/(?i)^!removeBanWord [a-z]*$/, 'bot-console') { BanWordDataService banWordDs ->
       String banWord = parts[1]
 
@@ -229,10 +229,33 @@ greeb {
       respond("banword `$banWord` removed from list")
     }
 
-    // list banwords
     messageReceived(/(?i)^!banWords/, 'bot-console') { BanWordDataService banWordDs ->
       def banWordList = banWordDs.all.collect { "• $it" }.join('\n')
       respond('\n' + banWordList)
+    }
+
+    messageReceived(/(?i)^!addFeed https?:\/\/.*$/, 'bot-console') { RSSDataService rssDS ->
+      String feedurl = parts[1]
+
+      rssDS.addFeed(feedurl, user.ID, user.name)
+
+      respond("Added feed: `$feedurl`")
+    }
+
+    messageReceived(/(?i)^!listFeeds$/, 'bot-console') { RSSDataService rssDS ->
+      def feeds = rssDS.getAllFeeds()
+
+      def response = '\n' + feeds.collect { "${it.key}.${it.value}" }.join('\n')
+
+      respond(response)
+    }
+
+    messageReceived(/(?i)^!removeFeed \d+$/, 'bot-console') { RSSDataService rssDS ->
+      Integer feedId = parts[1].toInteger()
+
+      rssDS.delete(feedId)
+
+      respond("Removed feed: `$feedId`")
     }
 
   }

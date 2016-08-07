@@ -1,4 +1,3 @@
-import static ch.qos.logback.classic.Level.DEBUG
 import static ch.qos.logback.classic.Level.INFO
 
 appender("Console-Appender", ConsoleAppender) {

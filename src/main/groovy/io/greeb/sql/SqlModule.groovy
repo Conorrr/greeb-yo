@@ -5,7 +5,7 @@ import groovy.sql.Sql
 
 import javax.sql.DataSource
 
-import static com.google.inject.Scopes.SINGLETON;
+import static com.google.inject.Scopes.SINGLETON
 
 public class SqlModule extends AbstractModule {
 

@@ -8,7 +8,7 @@ import javax.sql.DataSource
 
 class SqlProvider implements Provider<Sql> {
 
-  private final DataSource ds;
+  private final DataSource ds
 
   @Inject
   public SqlProvider(DataSource ds) {
