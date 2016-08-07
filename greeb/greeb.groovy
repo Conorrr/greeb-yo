@@ -51,14 +51,14 @@ greeb {
       consoleChannel.sendMessage(message)
     }
 
-    def listenForRegion = { regionName ->
-      messageReceived(/(?i)^!$regionName/) {
+    def listenForRegion = { String regionName ->
+      messageReceived(/(?i)^!$regionName$/) {
         List<IRole> currentRoles = user.getRolesForGuild(guild)
 
         def alreadyAssigned = currentRoles.find { regions.keySet().contains(it.name) }
 
         if (!alreadyAssigned) {
-          def newRole = guild.getRoles().find { it.name == regionName }
+          def newRole = guild.getRoles().find { it.name == regionName.toUpperCase() }
           guild.editUserRoles(user, (currentRoles + newRole) as IRole[])
           client.getOrCreatePMChannel(user).sendMessage("You are now assigned to `$regionName`")
         } else {
@@ -71,9 +71,8 @@ greeb {
       messageReceived(combine(not(privateChat()), not(channelNameMatches('bot-console')), messageMatches(/(?i)(^|\s)$banWord(\s|$)/))) {
         // delete message
         message.delete()
-
         // pm the user
-        client.getOrCreatePMChannel(user).sendMessage("your message `$content` has removed from <#$message.channel.ID>. If you think this is a mistake please contact the mods")
+        client.getOrCreatePMChannel(user).sendMessage("your message `$content` has removed from <#$message.channel.ID>. If you think this is a mistake please contact Yo' Support")
 
         // post a line to console
         console("message `$content` by <@$user.ID> removed from <#$message.channel.ID>")
@@ -141,11 +140,13 @@ greeb {
       client.getOrCreatePMChannel(user).sendMessage(message + regionBullets)
     }
 
-    messageReceived(/^!createRegion ([A-Z]{2,5})$/, 'bot-console') { RegionDataService regionDs ->
-      def newRole = guild.getRoles().find({ it.name == parts[1] })
+    messageReceived(/(?i)^!createRegion ([A-Z]{2,5})$/, 'bot-console') { RegionDataService regionDs ->
+      def newRegionName = parts[1].toUpperCase()
+      def newRole = guild.getRoles().find({ it.name == newRegionName })
 
       if (!newRole) {
-        return respond("Role `${parts[1]}` needs to be created in discord first.")
+        newRole = guild.createRole()
+        newRole.changeName(newRegionName)
       }
 
       if (regions.find { it.key == newRole.name }) {
@@ -160,8 +161,8 @@ greeb {
 
       respond("Region created: $newRole.name")
     }
-
-    messageReceived(/^!deleteRegion ([A-Z]{2,5})$/, 'bot-console') { RegionDataService regionDS ->
+!
+    messageReceived(/(?i)^!deleteRegion ([A-Z]{2,5})$/, 'bot-console') { RegionDataService regionDS ->
       def regionToDelete = parts[1]
       if (!regions[regionToDelete]) {
         return respond("`${parts[1]}` is not a region")
@@ -205,7 +206,7 @@ greeb {
         • `regionstats` - lists the number of users in each region
         • `!banWords` - lists all words on the block list
         • `!addBanWord [WORD]` - adds word to block list. If that word appears in any message the message will be deleted
-        • `!removeBanWord [WORD] - removes word from block list`
+        • `!removeBanWord [WORD]` - removes word from block list
         • `!addFeed [FEED URL]` - adds a new feed to RSS (currently only supports a small subset of feed formats)
         • `!listFeeds` - Lists all current feeds and their IDs
         • `!removeFeed [FEED ID]` - removes an RSS feed'''.stripIndent())
