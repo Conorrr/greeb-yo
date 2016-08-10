@@ -6,6 +6,8 @@ import io.greeb.yo.dataServices.DataServiceModule
 import io.greeb.yo.dataServices.RegionDataService
 import io.greeb.yo.dataServices.rss.RSSDataService
 import io.greeb.yo.dataServices.rss.RSSService
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import sx.blah.discord.handle.impl.events.MessageReceivedEvent
 import sx.blah.discord.handle.obj.IChannel
 import sx.blah.discord.handle.obj.IGuild
@@ -16,7 +18,9 @@ import static io.greeb.core.discord.DiscordMatchers.*
 import static io.greeb.core.dsl.DSL.greeb
 
 greeb {
-  credentials new File('discord.token').text
+  Logger LOGGER = LoggerFactory.getLogger("io.greeb.yo")
+
+  credentials new File('discord.token').text.trim()
   properties("properties.json")
 
   String mainChannelId = properties.mainChannelId
@@ -60,6 +64,7 @@ greeb {
 
     def console = { String message ->
       consoleChannel.sendMessage(message)
+      LOGGER.info(message)
     }
 
     def listenForRegion = { String regionName ->
@@ -72,6 +77,7 @@ greeb {
           def newRole = guild.getRoles().find { it.name == regionName.toUpperCase() }
           guild.editUserRoles(user, (currentRoles + newRole) as IRole[])
           client.getOrCreatePMChannel(user).sendMessage("You are now assigned to `$regionName`")
+          console("<@!$user.ID> joined region $newRole.name")
         } else {
           client.getOrCreatePMChannel(user).sendMessage("You are already assigned to $alreadyAssigned.name. If you wish to change region please use `!resetregion` if you wish to change your region use $regionBullets.")
         }
@@ -126,6 +132,8 @@ greeb {
         Welcome to Calm Yo' <@!$user.ID> - Feel free to make games, and get to know everyone. If you need any help, give Yo' Team a shout!
 
         GL & HF 😃""".stripIndent())
+
+      console("<@!106136360892514304>: <@!$user.ID> has joined")
     }
 
     messageReceived(/(?i)^!regions$/) {
@@ -149,6 +157,7 @@ greeb {
       }
 
       client.getOrCreatePMChannel(user).sendMessage(message + regionBullets)
+      console("<<@!$user.ID> reset their region")
     }
 
     messageReceived(/(?i)^!createRegion ([A-Z]{2,5})$/, 'bot-console', isAdmin) { RegionDataService regionDs ->
@@ -277,7 +286,6 @@ greeb {
     // join instinct
     pokeTeams.each { teamName, teamSettings ->
       messageReceived(/(?i)!joinTeam$teamName$/) {
-
         if (properties.pokemon.collect { (String) it.value.roleId }.any { hasRole(user, it) }) {
           return client.getOrCreatePMChannel(user).sendMessage('You are already a member of a pokemon team')
         }
@@ -288,6 +296,7 @@ greeb {
         guild.editUserRoles(user, (currentRoles + newRole) as IRole[])
 
         guild.getChannelByID(teamSettings.channelId).sendMessage("Team <@&${newRole.ID}>, You have a new Team Member! Welcome ${user.mention()}")
+        console("<@!$user.ID> joined poketeam $teamName")
       }
     }
 
