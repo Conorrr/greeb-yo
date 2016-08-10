@@ -23,6 +23,8 @@ greeb {
   String consoleChannelId = properties.consoleChannelId
   String gamingNewsChannelId = properties.gamingNewsChannelId
 
+  Map<String, Map<String, String>> pokeTeams = properties.pokemon
+
   Map<String, String> regions
   List<String> banWords
 
@@ -201,7 +203,8 @@ greeb {
       respond('''\n\
         • `!ping` - check if the bot is working
         • `!regions` - get a list of regions
-        • `!resetregion` - remove assigned region role'''.stripIndent())
+        • `!resetregion` - remove assigned region role
+        • `!joinTeam(Instinct/Mystic/Valor)` - join the appropriate Pokemon Go channel'''.stripIndent())
     }
 
     messageReceived(/(?i)^!help/, 'bot-console') {
@@ -209,6 +212,7 @@ greeb {
         • `!ping` - check if the bot is working
         • `!regions` - get a list of regions
         • `!resetregion` - remove assigned region role
+        • `!joinTeam(Instinct/Mystic/Valor)` - join the appropriate Pokemon Go channel
         -- admin commands (only work in bot-console)
         • `!createRegion [REGION]` - * creates a new region, can be 2-5 characters
         • `!deleteRegion [REGION]` - * deletes region
@@ -268,6 +272,23 @@ greeb {
       rssDS.delete(feedId)
 
       respond("Removed feed: `$feedId`")
+    }
+
+    // join instinct
+    pokeTeams.each { teamName, teamSettings ->
+      messageReceived(/(?i)!joinTeam$teamName$/) {
+
+        if (properties.pokemon.collect { (String) it.value.roleId }.any { hasRole(user, it) }) {
+          return client.getOrCreatePMChannel(user).sendMessage('You are already a member of a pokemon team')
+        }
+
+        def newRole = guild.getRoleByID(teamSettings.roleId)
+
+        List<IRole> currentRoles = user.getRolesForGuild(guild)
+        guild.editUserRoles(user, (currentRoles + newRole) as IRole[])
+
+        guild.getChannelByID(teamSettings.channelId).sendMessage("Team <@&${newRole.ID}>, You have a new Team Member! Welcome ${user.mention()}")
+      }
     }
 
   }
