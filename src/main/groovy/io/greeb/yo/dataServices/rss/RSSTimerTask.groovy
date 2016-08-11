@@ -32,7 +32,7 @@ class RSSTimerTask extends TimerTask {
         LOGGER.info("Posting ${newArticles.size()} articles")
         postArticles(newArticles)
       }
-    } catch(Exception e){
+    } catch (Exception e) {
       LOGGER.error('Error running RSS feed', e)
     }
   }
@@ -42,7 +42,7 @@ class RSSTimerTask extends TimerTask {
   }
 
   private void postArticles(List<RSSArticle> newArticles) {
-    newArticles.reverse().collect { it.toString() }.each(channel.&sendMessage)
+    newArticles.reverse().collect { it.toString() }.each { channel.sendMessage(it); sleep(3000); }
   }
 
   private List<RSSArticle> findNewArticles(List<RSSArticle> allArticles) {
