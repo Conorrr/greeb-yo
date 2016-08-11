@@ -19,7 +19,7 @@ class RSSUtil {
       String id = entry.link
       String title = entry.title
       String url = entry.link
-      Date date = entry.publishedDate
+      Date date = entry.publishedDate ?: new Date()
 
       new RSSArticle(id, title, url, date)
     }
