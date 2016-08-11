@@ -8,6 +8,7 @@ import io.greeb.yo.dataServices.rss.RSSDataService
 import io.greeb.yo.dataServices.rss.RSSService
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import sx.blah.discord.api.internal.DiscordUtils
 import sx.blah.discord.handle.impl.events.MessageReceivedEvent
 import sx.blah.discord.handle.obj.IChannel
 import sx.blah.discord.handle.obj.IGuild

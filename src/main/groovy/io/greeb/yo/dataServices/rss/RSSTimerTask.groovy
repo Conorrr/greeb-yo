@@ -17,19 +17,23 @@ class RSSTimerTask extends TimerTask {
 
   @Override
   void run() {
-    LOGGER.info('Feed update check')
-    Map<Integer, String> feeds = rssDataService.allFeeds
+    try {
+      LOGGER.info('Feed update check')
+      Map<Integer, String> feeds = rssDataService.allFeeds
 
-    feeds.each { feedId, url ->
-      LOGGER.info("downloading articles from $url")
-      List<RSSArticle> articles = RSSUtil.download(url)
-      List<RSSArticle> newArticles = findNewArticles(articles)
+      feeds.each { feedId, url ->
+        LOGGER.info("downloading articles from $url")
+        List<RSSArticle> articles = RSSUtil.download(url)
+        List<RSSArticle> newArticles = findNewArticles(articles)
 
-      LOGGER.debug("New articles: ${newArticles.join(',')}")
+        LOGGER.debug("New articles: ${newArticles.join(',')}")
 
-      addArticlesToDb(newArticles, feedId)
-      LOGGER.info("Posting ${newArticles.size()} articles")
-      postArticles(newArticles)
+        addArticlesToDb(newArticles, feedId)
+        LOGGER.info("Posting ${newArticles.size()} articles")
+        postArticles(newArticles)
+      }
+    } catch(Exception e){
+      LOGGER.error('Error running RSS feed', e)
     }
   }
 
