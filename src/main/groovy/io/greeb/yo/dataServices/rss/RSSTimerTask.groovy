@@ -1,8 +1,11 @@
 package io.greeb.yo.dataServices.rss
 
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import sx.blah.discord.handle.obj.IChannel
 
 class RSSTimerTask extends TimerTask {
+  Logger LOGGER = LoggerFactory.getLogger(RSSTimerTask)
 
   IChannel channel
   RSSDataService rssDataService
@@ -14,14 +17,18 @@ class RSSTimerTask extends TimerTask {
 
   @Override
   void run() {
+    LOGGER.info('Feed update check')
     Map<Integer, String> feeds = rssDataService.allFeeds
 
     feeds.each { feedId, url ->
+      LOGGER.info("downloading articles from $url")
       List<RSSArticle> articles = RSSUtil.download(url)
-
       List<RSSArticle> newArticles = findNewArticles(articles)
 
+      LOGGER.debug("New articles: ${newArticles.join(',')}")
+
       addArticlesToDb(newArticles, feedId)
+      LOGGER.info("Posting ${newArticles.size()} articles")
       postArticles(newArticles)
     }
   }

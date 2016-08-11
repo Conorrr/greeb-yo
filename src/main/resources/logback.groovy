@@ -6,6 +6,6 @@ appender("Console-Appender", ConsoleAppender) {
   }
 }
 
-//logger("io.greeb", DEBUG)
+//logger("io.greeb.yo.dataServices.rss", DEBUG)
 
 root(INFO, ["Console-Appender"])

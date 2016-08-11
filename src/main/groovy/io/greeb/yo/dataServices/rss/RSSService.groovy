@@ -1,6 +1,8 @@
 package io.greeb.yo.dataServices.rss
 
 import com.google.inject.Inject
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import sx.blah.discord.handle.obj.IChannel
 
 class RSSService {

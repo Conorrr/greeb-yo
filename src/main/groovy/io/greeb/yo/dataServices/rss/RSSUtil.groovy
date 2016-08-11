@@ -1,21 +1,25 @@
 package io.greeb.yo.dataServices.rss
 
-import groovy.util.slurpersupport.GPathResult
+import com.rometools.rome.feed.synd.SyndFeed
+import com.rometools.rome.io.SyndFeedInput
+import com.rometools.rome.io.XmlReader
 
 class RSSUtil {
 
-  static List<RSSArticle> download(String rssUrl) {
-    GPathResult rss = new XmlSlurper().parseText(rssUrl.toURL().text)
+  static SyndFeedInput input = new SyndFeedInput()
 
-    return extractArticles(rss)
+  static List<RSSArticle> download(String rssUrl) {
+    SyndFeed feed = input.build(new XmlReader(rssUrl.toURL()))
+
+    return extractArticles(feed)
   }
 
-  static List<RSSArticle> extractArticles(GPathResult rss) {
-    return rss.entry.collect { entry ->
-      String id = entry.id
+  static List<RSSArticle> extractArticles(SyndFeed feed) {
+    return feed.entries.collect { entry ->
+      String id = entry.link
       String title = entry.title
-      String url = entry.link.find { it.attributes()['type'] == 'text/html' }.attributes()['href']
-      Date date = Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSSXXX", entry.published.toString())
+      String url = entry.link
+      Date date = entry.publishedDate
 
       new RSSArticle(id, title, url, date)
     }
