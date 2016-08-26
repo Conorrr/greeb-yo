@@ -130,7 +130,7 @@ greeb {
       guild.editUserRoles(user, (currentRoles + newRole) as IRole[])
 
       mainChannel.sendMessage("""\
-        Welcome to Calm Yo' <@!$user.ID> - Make yourself at home! Feel free to make games, set your region (!regions), check the latest bot commands (#bot_patchnotes) and imporantly give our #rules a quick read.
+        Welcome to Calm Yo' <@!$user.ID> - Make yourself at home! Feel free to make games, set your region (!regions), check the latest bot commands (<#211829950163058688>) and imporantly give our <#195522076730195968> a quick read.
         HF 😃""".stripIndent())
 
       console("<@!106136360892514304>: <@!$user.ID> has joined")
