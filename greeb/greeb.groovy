@@ -9,6 +9,7 @@ import io.greeb.yo.dataServices.rss.RSSService
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import sx.blah.discord.handle.impl.events.MessageReceivedEvent
+import sx.blah.discord.handle.impl.events.UserJoinEvent
 import sx.blah.discord.handle.obj.IChannel
 import sx.blah.discord.handle.obj.IGuild
 import sx.blah.discord.handle.obj.IRole
@@ -27,6 +28,7 @@ greeb {
   String consoleChannelId = properties.consoleChannelId
   String gamingNewsChannelId = properties.gamingNewsChannelId
   String lfgRoleId = properties.lfgRoleId
+  List<String> autoBanNames = properties.autoBanNames
 
   Map<String, Map<String, String>> pokeTeams = properties.pokemon
 
@@ -136,6 +138,21 @@ greeb {
         HF 😃""".stripIndent())
 
       console("<@!106136360892514304>: <@!$user.ID> has joined")
+    }
+
+    userJoin { UserJoinEvent event ->
+      autoBanNames.any { it.equalsIgnoreCase(event.user.name) }
+    } {
+      guild.banUser(user)
+      console("<@!$user.ID> has been auto-banned because their username is on the autoban list")
+    }
+
+    // delete any file uploaded with extension .exe
+    messageReceived { MessageReceivedEvent event ->
+      event.message.attachments.any({ it.filename.contains('.exe') })
+    } {
+      message.delete()
+      console("<@!$user.ID> tried to upload an .exe file, the file has been deleted")
     }
 
     messageReceived(/(?i)^!regions$/) {
