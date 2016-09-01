@@ -8,7 +8,6 @@ import io.greeb.yo.dataServices.rss.RSSDataService
 import io.greeb.yo.dataServices.rss.RSSService
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import sx.blah.discord.api.internal.DiscordUtils
 import sx.blah.discord.handle.impl.events.MessageReceivedEvent
 import sx.blah.discord.handle.obj.IChannel
 import sx.blah.discord.handle.obj.IGuild
@@ -27,6 +26,7 @@ greeb {
   String mainChannelId = properties.mainChannelId
   String consoleChannelId = properties.consoleChannelId
   String gamingNewsChannelId = properties.gamingNewsChannelId
+  String lfgRoleId = properties.lfgRoleId
 
   Map<String, Map<String, String>> pokeTeams = properties.pokemon
 
@@ -38,6 +38,7 @@ greeb {
   IChannel mainChannel
   IChannel consoleChannel
   IChannel gamingNewsChannel
+  IRole lfgRole
 
   def hasRole = { IUser user, String roleId ->
     guild.getRolesForUser(user).any { it.ID == roleId }
@@ -111,6 +112,7 @@ greeb {
       mainChannel = guild.getChannelByID(mainChannelId)
       consoleChannel = guild.getChannelByID(consoleChannelId)
       gamingNewsChannel = guild.getChannelByID(gamingNewsChannelId)
+      lfgRole = guild.getRoleByID(lfgRoleId)
 
       rssService.start(gamingNewsChannel)
 
@@ -283,7 +285,6 @@ greeb {
       respond("Removed feed: `$feedId`")
     }
 
-    // join instinct
     pokeTeams.each { teamName, teamSettings ->
       messageReceived(/(?i)!joinTeam$teamName$/) {
         if (properties.pokemon.collect { (String) it.value.roleId }.any { hasRole(user, it) }) {
@@ -295,8 +296,31 @@ greeb {
         List<IRole> currentRoles = user.getRolesForGuild(guild)
         guild.editUserRoles(user, (currentRoles + newRole) as IRole[])
 
-        guild.getChannelByID(teamSettings.channelId).sendMessage("Team <@&${newRole.ID}>, You have a new Team Member! Welcome ${user.mention()}")
+        guild.getChannelByID(teamSettings.channelId).
+            sendMessage("Team <@&${newRole.ID}>, You have a new Team Member! Welcome ${user.mention()}")
         console("<@!$user.ID> joined poketeam $teamName")
+      }
+    }
+
+    messageReceived(/(?i)!lfg/) {
+      List<IRole> currentRoles = user.getRolesForGuild(guild)
+
+      if (!currentRoles.find { regions.keySet().contains(it.name) }) {
+        return client.getOrCreatePMChannel(user).sendMessage('''\n
+            Before using the Looking For Games feature, you\'ll need to set your region. :)
+            Reply with `!regions` for a list of possible regions'''.stripIndent())
+      }
+
+      if (!currentRoles.find { it.ID == lfgRoleId }) {
+        guild.editUserRoles(user, (currentRoles + lfgRole) as IRole[])
+      }
+    }
+
+    messageReceived(/(?i)!nlfg/) {
+      List<IRole> currentRoles = user.getRolesForGuild(guild)
+
+      if (currentRoles.find { it.ID == lfgRoleId }) {
+        guild.editUserRoles(user, (currentRoles - lfgRole) as IRole[])
       }
     }
 
