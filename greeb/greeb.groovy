@@ -27,7 +27,6 @@ greeb {
   String mainChannelId = properties.mainChannelId
   String consoleChannelId = properties.consoleChannelId
   String gamingNewsChannelId = properties.gamingNewsChannelId
-  String lfgRoleId = properties.lfgRoleId
   List<String> autoBanNames = properties.autoBanNames
 
   Map<String, Map<String, String>> pokeTeams = properties.pokemon
@@ -40,7 +39,6 @@ greeb {
   IChannel mainChannel
   IChannel consoleChannel
   IChannel gamingNewsChannel
-  IRole lfgRole
 
   def hasRole = { IUser user, String roleId ->
     guild.getRolesForUser(user).any { it.ID == roleId }
@@ -114,7 +112,6 @@ greeb {
       mainChannel = guild.getChannelByID(mainChannelId)
       consoleChannel = guild.getChannelByID(consoleChannelId)
       gamingNewsChannel = guild.getChannelByID(gamingNewsChannelId)
-      lfgRole = guild.getRoleByID(lfgRoleId)
 
       rssService.start(gamingNewsChannel)
 
@@ -176,7 +173,7 @@ greeb {
       }
 
       client.getOrCreatePMChannel(user).sendMessage(message + regionBullets)
-      console("<<@!$user.ID> reset their region")
+      console("<@!$user.ID> reset their region")
     }
 
     messageReceived(/(?i)^!createRegion ([A-Z]{2,5})$/, 'bot-console', isAdmin) { RegionDataService regionDs ->
@@ -318,7 +315,7 @@ greeb {
         guild.editUserRoles(user, (currentRoles + newRole) as IRole[])
 
         guild.getChannelByID(teamSettings.channelId).
-            sendMessage("Team <@&${newRole.ID}>, You have a new Team Member! Welcome ${user.mention()}")
+                sendMessage("Team <@&${newRole.ID}>, You have a new Team Member! Welcome ${user.mention()}")
         console("<@!$user.ID> joined poketeam $teamName")
       }
     }
@@ -326,23 +323,33 @@ greeb {
     messageReceived(/(?i)!lfg/) {
       List<IRole> currentRoles = user.getRolesForGuild(guild)
 
-      if (!currentRoles.find { regions.keySet().contains(it.name) }) {
+      IRole currentRegion = currentRoles.find { regions.keySet().contains(it.name) }
+
+      if (!currentRegion) {
         return client.getOrCreatePMChannel(user).sendMessage('''\n
             Before using the Looking For Games feature, you\'ll need to set your region. :)
             Reply with `!regions` for a list of possible regions'''.stripIndent())
       }
 
-      if (!currentRoles.find { it.ID == lfgRoleId }) {
+      IRole lfgRole = guild.roles.find { it.name == "LFG - $currentRegion.name".toString() }
+      if (lfgRole) {
         guild.editUserRoles(user, (currentRoles + lfgRole) as IRole[])
+      } else {
+        console("<@!106136360892514304>: `LFG - $currentRegion.name` role doesn't exist")
       }
     }
 
     messageReceived(/(?i)!nlfg/) {
       List<IRole> currentRoles = user.getRolesForGuild(guild)
-
-      if (currentRoles.find { it.ID == lfgRoleId }) {
+      IRole lfgRole = currentRoles.find { it.name.contains('LFG') }
+      if (lfgRole) {
         guild.editUserRoles(user, (currentRoles - lfgRole) as IRole[])
       }
+    }
+
+    discordDisconnected { true } {
+      LOGGER.error('Stopping application because of disconnect with discord. Supervisor should bring it back.')
+      System.exit(1)
     }
 
   }
