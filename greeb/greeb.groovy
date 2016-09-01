@@ -215,7 +215,9 @@ greeb {
         • `!ping` - check if the bot is working
         • `!regions` - get a list of regions
         • `!resetregion` - remove assigned region role
-        • `!joinTeam(Instinct/Mystic/Valor)` - join the appropriate Pokemon Go channel'''.stripIndent())
+        • `!joinTeam(Instinct/Mystic/Valor)` - join the appropriate Pokemon Go channel
+        * `!LFG` - get the looking for game role
+        * `!NLFG` - remove the looking for game flag'''.stripIndent())
     }
 
     messageReceived(/(?i)^!help/, 'bot-console') {
@@ -224,6 +226,8 @@ greeb {
         • `!regions` - get a list of regions
         • `!resetregion` - remove assigned region role
         • `!joinTeam(Instinct/Mystic/Valor)` - join the appropriate Pokemon Go channel
+        * `!LFG` - get the looking for game role
+        * `!NLFG` - remove the looking for game flag
         -- admin commands (only work in bot-console)
         • `!createRegion [REGION]` - * creates a new region, can be 2-5 characters
         • `!deleteRegion [REGION]` - * deletes region
