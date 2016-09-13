@@ -145,12 +145,13 @@ greeb {
     }
 
     // delete any file uploaded with extension .exe
-    messageReceived { MessageReceivedEvent event ->
-      event.message.attachments.any({ it.filename.contains('.exe') })
-    } {
-      message.delete()
-      console("<@!$user.ID> tried to upload an .exe file, the file has been deleted")
-    }
+    // temporary removed until it's fixed
+//    messageReceived { MessageReceivedEvent event ->
+//      event.message.attachments.any({ it.filename.contains('.exe') })
+//    } {
+//      message.delete()
+//      console("<@!$user.ID> tried to upload an .exe file, the file has been deleted")
+//    }
 
     messageReceived(/(?i)^!regions$/) {
       def message = "Here is a list of region tags you can choose from, choose wisely! \nPlease reply to this message with:"
