@@ -131,8 +131,9 @@ greeb {
       guild.editUserRoles(user, (currentRoles + newRole) as IRole[])
 
       mainChannel.sendMessage("""\
-        Welcome to Calm Yo' <@!$user.ID> - Make yourself at home! Feel free to make games, set your region (!regions), check the latest bot commands (<#211829950163058688>) and imporantly give our <#195522076730195968> a quick read.
-        HF 😃""".stripIndent())
+        Sup <@!$user.ID>, you're now a Filthy Casual! ❤
+        Make yourself at home, pick a `!regions` & find games `!LFG`. Give our <#195522076730195968> & <#211829950163058688> a quick read too. Stick around, events every weekend! <#162513993963929600> & URF next week
+      😃""".stripIndent())
 
       console("<@!106136360892514304>: <@!$user.ID> has joined")
     }
