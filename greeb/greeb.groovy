@@ -17,6 +17,7 @@ import sx.blah.discord.handle.obj.IUser
 
 import static io.greeb.core.discord.DiscordMatchers.*
 import static io.greeb.core.dsl.DSL.greeb
+import static java.util.Collections.shuffle
 
 greeb {
   Logger LOGGER = LoggerFactory.getLogger("io.greeb.yo")
@@ -39,6 +40,10 @@ greeb {
   IChannel mainChannel
   IChannel consoleChannel
   IChannel gamingNewsChannel
+
+  List<IRole> houseRoles
+  Map<IRole, List<IUser>> houseRoleUsers
+  List<IUser> unassignedUsers = []
 
   def hasRole = { IUser user, String roleId ->
     guild.getRolesForUser(user).any { it.ID == roleId }
@@ -81,17 +86,20 @@ greeb {
           client.getOrCreatePMChannel(user).sendMessage("You are now assigned to `$regionName`")
           console("<@!$user.ID> joined region $newRole.name")
         } else {
-          client.getOrCreatePMChannel(user).sendMessage("You are already assigned to $alreadyAssigned.name. If you wish to change region please use `!resetregion` if you wish to change your region use $regionBullets.")
+          client.getOrCreatePMChannel(user).sendMessage(
+              "You are already assigned to $alreadyAssigned.name. If you wish to change region please use `!resetregion` if you wish to change your region use $regionBullets.")
         }
       }
     }
 
     def listenForBanWord = { banWord ->
-      messageReceived(combine(not(privateChat()), not(channelNameMatches('bot-console')), messageMatches(/(?i)(^|\s)$banWord(\s|$)/))) {
+      messageReceived(combine(not(privateChat()), not(channelNameMatches('bot-console')),
+                              messageMatches(/(?i)(^|\s)$banWord(\s|$)/))) {
         // delete message
         message.delete()
         // pm the user
-        client.getOrCreatePMChannel(user).sendMessage("your message `$content` has removed from <#$message.channel.ID>. If you think this is a mistake please contact Yo' Support")
+        client.getOrCreatePMChannel(user).sendMessage(
+            "your message `$content` has removed from <#$message.channel.ID>. If you think this is a mistake please contact Yo' Support")
 
         // post a line to console
         console("message `$content` by <@$user.ID> removed from <#$message.channel.ID>")
@@ -169,9 +177,11 @@ greeb {
 
       if (currentRegion) {
         guild.editUserRoles(user, (currentRoles - currentRegion) as IRole[])
-        message = "Your region tag has been reset, To join a new region reply to this message with a region tag from the list below."
+        message =
+            "Your region tag has been reset, To join a new region reply to this message with a region tag from the list below."
       } else {
-        message = "You aren't assigned to any regions. To join a region reply to this message with a region tag from the list below."
+        message =
+            "You aren't assigned to any regions. To join a region reply to this message with a region tag from the list below."
       }
 
       client.getOrCreatePMChannel(user).sendMessage(message + regionBullets)
@@ -221,12 +231,13 @@ greeb {
       guild.getUsers().get(0).getRolesForGuild(guild)
 
       respond(guild.users
-              .groupBy { it.getRolesForGuild(guild).find { role -> regions.containsKey(role.name) } ?: 'NONE' }
-              .collect { region, users -> "• !$region - ${users.size()}" }
-              .join('\n'))
+                  .groupBy { it.getRolesForGuild(guild).find { role -> regions.containsKey(role.name) } ?: 'NONE' }
+                  .collect { region, users -> "• !$region - ${users.size()}" }
+                  .join('\n'))
     }
 
-    messageReceived(combine(messageMatches(/(?i)^!help/), { MessageReceivedEvent e -> e.message.channel.name != 'bot-console' })) {
+    messageReceived(
+        combine(messageMatches(/(?i)^!help/), { MessageReceivedEvent e -> e.message.channel.name != 'bot-console' })) {
       respond('''\n\
         • `!ping` - check if the bot is working
         • `!regions` - get a list of regions
@@ -317,7 +328,7 @@ greeb {
         guild.editUserRoles(user, (currentRoles + newRole) as IRole[])
 
         guild.getChannelByID(teamSettings.channelId).
-                sendMessage("Team <@&${newRole.ID}>, You have a new Team Member! Welcome ${user.mention()}")
+            sendMessage("Team <@&${newRole.ID}>, You have a new Team Member! Welcome ${user.mention()}")
         console("<@!$user.ID> joined poketeam $teamName")
       }
     }
@@ -352,6 +363,55 @@ greeb {
     discordDisconnected { true } {
       LOGGER.error('Stopping application because of disconnect with discord. Supervisor should bring it back.')
       System.exit(1)
+    }
+
+    // ======= House Points ========
+    guildCreate(all()) {
+      houseRoles = properties.houses.collect(guild.&getRoleByID)
+      houseRoleUsers = houseRoles.collectEntries({ [(it): []] })
+
+      def users = guild.users
+      users.each {
+        def currentRoles = it.getRolesForGuild(guild)
+        def assignedHouse = currentRoles.intersect(houseRoles)
+        if (assignedHouse) {
+          houseRoleUsers[assignedHouse[0]] << it
+        } else if (!it.bot) {
+          unassignedUsers << it
+        }
+      }
+    }
+
+    messageReceived(/(?i)^!houseMemberCount/, 'bot-console') {
+      respond("${unassignedUsers.size()} unassigned users")
+    }
+
+    messageReceived(/(?i)^!houseStats/) {
+      // House names  |  House Points
+      // TODO
+    }
+
+    messageReceived(/(?i)^!assignUnhoused/, 'bot-console') {
+      shuffle(houseRoles)
+
+      console("${unassignedUsers.size()} unassigned users")
+
+      unassignedUsers.each { unassignedUser ->
+        IRole newHouse = houseRoleUsers.min { it.value.size() }.key
+        console("assigning $unassignedUser.name to $newHouse.name")
+        houseRoleUsers[newHouse] << unassignedUser
+        guild.editUserRoles(unassignedUser, (guild.getRolesForUser(unassignedUser) + newHouse) as IRole[])
+      }
+
+      console("finished assigning houses")
+    }
+
+    userJoin(all()) {
+      IRole newHouse = houseRoleUsers.min { it.value.size() }.key
+      console("assigning $user.name to $newHouse.name")
+      houseRoleUsers[newHouse] << user
+      guild.editUserRoles(user, (guild.getRolesForUser(user) + newHouse) as IRole[])
+      mainChannel.sendMessage("<@!$newHouse.ID> - Please give a warm welcome your very new House member <@!$user.ID>! :grinning:")
     }
 
   }
