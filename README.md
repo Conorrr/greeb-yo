@@ -24,3 +24,6 @@ These commands can only be used in bot-console channel
 User Settings -> Appearance -> Enable Developer Mode
 
 Then right click a user of channel and select 'Copy ID'
+
+## TODO
+* Add thread-safety to state

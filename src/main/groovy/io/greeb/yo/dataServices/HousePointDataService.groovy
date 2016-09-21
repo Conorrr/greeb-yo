@@ -6,6 +6,7 @@ import io.greeb.yo.housePoints.House
 import sx.blah.discord.handle.obj.IChannel
 import sx.blah.discord.handle.obj.IGuild
 import sx.blah.discord.handle.obj.IRole
+import sx.blah.discord.handle.obj.IUser
 
 class HousePointDataService {
 
@@ -29,6 +30,10 @@ class HousePointDataService {
       int points = (int) it.getProperty('points')
       new House(id, role, channel, points)
     })
+  }
+
+  void honour(House house, int points, String reason, IUser awardee) {
+    sql.execute("INSERT ")
   }
 
   // add points

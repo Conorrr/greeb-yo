@@ -5,14 +5,9 @@ import com.google.inject.Singleton
 import io.greeb.yo.dataServices.HousePointDataService
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import sx.blah.discord.api.internal.DiscordUtils
-import sx.blah.discord.handle.impl.obj.Guild
 import sx.blah.discord.handle.obj.IGuild
 import sx.blah.discord.handle.obj.IRole
 import sx.blah.discord.handle.obj.IUser
-import sx.blah.discord.handle.obj.Permissions
-
-import static java.util.Collections.shuffle
 
 @Singleton
 class HousePointService {
@@ -26,11 +21,6 @@ class HousePointService {
   Map<House, List<IUser>> houseRoleUsers
   List<IUser> unassignedUsers = []
   IGuild guild
-
-//  void console(String message) {
-//    guild.getChannelByID(consoleChannelId).sendMessage(message)
-//    LOGGER.info(message)
-//  }
 
   void initiate(IGuild guild) {
     this.guild = guild
@@ -62,6 +52,23 @@ class HousePointService {
     unassignedUsers.remove(user)
 
     newHouse
+  }
+
+  /**
+   * Assigns points to a house (can be negative)
+   * returns null if the user does not belong to a house
+   */
+  House honour(IUser user, int points, String reason) {
+    House house = houseRoleUsers.find { k, v -> v.contains(user) }.key
+    if (house == null) {
+      return null
+    }
+
+    dataService.honour()
+
+    house.points += points
+
+    return house
   }
 
   // add points (house, number of points, reason)

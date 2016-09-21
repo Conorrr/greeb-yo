@@ -378,12 +378,24 @@ greeb {
       respond(housePointService.houses.collect { house -> "${house.role.name} - ${house.points}" }.join('\n'))
     }
 
+    // !honour <@!86725763428028416> -5 some reason
+    messageReceived(/(?i)^!honou?r <@!\d+> (-|\+)?\d{1,5} .{5,}/, 'bot-console') {
+      HousePointService housePointService ->
+        def receiver = guild.getUserByID(parts[1])
+        def points = parts[2].toInteger()
+        def reason = parts[3..-1].join(' ')
+
+        House house = housePointService.honour(receiver, points, reason)
+        console("${user.mention()} has awarded ${receiver.mention()}($house.role.name) $points points because `$reason`")
+    }
+
     messageReceived(/(?i)^!assignUnhoused/, 'bot-console') { HousePointService housePointService ->
       def unassignedUsers = housePointService.unassignedUsers
 
+      respond("unassigned users ${housePointService.unassignedUsers.size()}")
+
       unassignedUsers.collect().each { unassignedUser ->
-        House newHouse = housePointService.addUser(unassignedUser)
-//        console("assigning <@!$unassignedUser.ID> to $newHouse.role.name")
+        housePointService.addUser(unassignedUser)
       }
 
       console("finished assigning users to houses")
