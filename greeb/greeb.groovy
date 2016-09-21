@@ -6,6 +6,8 @@ import io.greeb.yo.dataServices.DataServiceModule
 import io.greeb.yo.dataServices.RegionDataService
 import io.greeb.yo.dataServices.rss.RSSDataService
 import io.greeb.yo.dataServices.rss.RSSService
+import io.greeb.yo.housePoints.House
+import io.greeb.yo.housePoints.HousePointService
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import sx.blah.discord.handle.impl.events.MessageReceivedEvent
@@ -17,7 +19,6 @@ import sx.blah.discord.handle.obj.IUser
 
 import static io.greeb.core.discord.DiscordMatchers.*
 import static io.greeb.core.dsl.DSL.greeb
-import static java.util.Collections.shuffle
 
 greeb {
   Logger LOGGER = LoggerFactory.getLogger("io.greeb.yo")
@@ -40,10 +41,6 @@ greeb {
   IChannel mainChannel
   IChannel consoleChannel
   IChannel gamingNewsChannel
-
-  List<IRole> houseRoles
-  Map<IRole, List<IUser>> houseRoleUsers
-  List<IUser> unassignedUsers = []
 
   def hasRole = { IUser user, String roleId ->
     guild.getRolesForUser(user).any { it.ID == roleId }
@@ -355,6 +352,7 @@ greeb {
     messageReceived(/(?i)!nlfg/) {
       List<IRole> currentRoles = user.getRolesForGuild(guild)
       IRole lfgRole = currentRoles.find { it.name.contains('LFG') }
+      LOGGER.debug("$user.name leaving $lfgRole.name")
       if (lfgRole) {
         guild.editUserRoles(user, (currentRoles - lfgRole) as IRole[])
       }
@@ -366,52 +364,35 @@ greeb {
     }
 
     // ======= House Points ========
-    guildCreate(all()) {
-      houseRoles = properties.houses.collect(guild.&getRoleByID)
-      houseRoleUsers = houseRoles.collectEntries({ [(it): []] })
-
-      def users = guild.users
-      users.each {
-        def currentRoles = it.getRolesForGuild(guild)
-        def assignedHouse = currentRoles.intersect(houseRoles)
-        if (assignedHouse) {
-          houseRoleUsers[assignedHouse[0]] << it
-        } else if (!it.bot) {
-          unassignedUsers << it
-        }
-      }
+    guildCreate(all()) { HousePointService housePointService ->
+      housePointService.initiate(guild)
     }
 
-    messageReceived(/(?i)^!houseMemberCount/, 'bot-console') {
-      respond("${unassignedUsers.size()} unassigned users")
+    messageReceived(/(?i)^!houseMemberCount/, 'bot-console') { HousePointService housePointService ->
+      def message = housePointService.houseRoleUsers.collect { k, v -> "${k.role.name} - ${v.size()}" }.join('\n')
+
+      respond("$message\nunassigned - ${housePointService.unassignedUsers.size()}")
     }
 
-    messageReceived(/(?i)^!houseStats/) {
-      // House names  |  House Points
-      // TODO
+    messageReceived(/(?i)^!houseStats/) { HousePointService housePointService ->
+      respond(housePointService.houses.collect { house -> "${house.role.name} - ${house.points}" }.join('\n'))
     }
 
-    messageReceived(/(?i)^!assignUnhoused/, 'bot-console') {
-      shuffle(houseRoles)
+    messageReceived(/(?i)^!assignUnhoused/, 'bot-console') { HousePointService housePointService ->
+      def unassignedUsers = housePointService.unassignedUsers
 
-      console("${unassignedUsers.size()} unassigned users")
-
-      unassignedUsers.each { unassignedUser ->
-        IRole newHouse = houseRoleUsers.min { it.value.size() }.key
-        console("assigning $unassignedUser.name to $newHouse.name")
-        houseRoleUsers[newHouse] << unassignedUser
-        guild.editUserRoles(unassignedUser, (guild.getRolesForUser(unassignedUser) + newHouse) as IRole[])
+      unassignedUsers.collect().each { unassignedUser ->
+        House newHouse = housePointService.addUser(unassignedUser)
+//        console("assigning <@!$unassignedUser.ID> to $newHouse.role.name")
       }
 
-      console("finished assigning houses")
+      console("finished assigning users to houses")
     }
 
-    userJoin(all()) {
-      IRole newHouse = houseRoleUsers.min { it.value.size() }.key
-      console("assigning $user.name to $newHouse.name")
-      houseRoleUsers[newHouse] << user
-      guild.editUserRoles(user, (guild.getRolesForUser(user) + newHouse) as IRole[])
-      mainChannel.sendMessage("<@!$newHouse.ID> - Please give a warm welcome your very new House member <@!$user.ID>! :grinning:")
+    userJoin(all()) { HousePointService housePointService ->
+      House newHouse = housePointService.addUser(user)
+      mainChannel.sendMessage(
+          "<@!$newHouse.role.ID> - Please give a warm welcome your very new House member <@!$user.ID>! :grinning:")
     }
 
   }
