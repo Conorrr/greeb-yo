@@ -385,8 +385,9 @@ greeb {
     messageReceived(/(?i)!nlfg/) {
       List<IRole> currentRoles = user.getRolesForGuild(guild)
       IRole lfgRole = currentRoles.find { it.name.contains('LFG') }
-      LOGGER.debug("$user.name leaving $lfgRole.name")
-      if (lfgRole) {
+      println "$user.name leaving ${lfgRole?.name}"
+      if (lfgRole != null) {
+        println 'removing role'
         guild.editUserRoles(user, (currentRoles - lfgRole) as IRole[])
       }
     }
