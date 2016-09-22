@@ -465,6 +465,7 @@ greeb {
 
       unassignedUsers.collect().each { unassignedUser ->
         housePointService.addUser(unassignedUser)
+        sleep(2000)
       }
 
       console("finished assigning users to houses")
