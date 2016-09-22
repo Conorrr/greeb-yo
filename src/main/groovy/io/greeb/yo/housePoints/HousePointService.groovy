@@ -71,19 +71,18 @@ class HousePointService {
     return house
   }
 
-  // add points (house, number of points, reason)
-  //            (user, number of points, reason)
+  int getHonour(IUser user) {
+    dataService.getHonourForUser(user.ID)
+  }
 
-  // remove points (house, number of points, reason)
-  //               (user, number of points, reason)
+  House getHouse(IUser user) {
+    houseRoleUsers.find { k, v -> v.contains(user) }?.key
+  }
 
-  // get points for houses
-
-  // get house for user
-
-  // create season
-
-  // end season
-
-
+  void userLeft(IUser user) {
+    House house = getHouse(user)
+    if (house) {
+      houseRoleUsers[house].remove(user)
+    }
+  }
 }

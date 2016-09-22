@@ -37,13 +37,10 @@ class HousePointDataService {
     values ($house.id, $awardee.ID, (SELECT id FROM season WHERE start < now() AND end > now()), now(), $points, $reason)""")
   }
 
-  // add points
-
-  // remove points
-
-  // get points for houses
-
-  // create season
-
-  // end season
+  int getHonourForUser(String userId) {
+    (int) sql.firstRow("""SELECT IFNULL(SUM(points), 0) as points
+      FROM point_audit
+      WHERE season = (SELECT season.id from SEASON where season.start < now() AND season.end > now())
+      AND userid = $userId""").get('points')
+  }
 }

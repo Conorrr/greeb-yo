@@ -42,6 +42,8 @@ greeb {
   IChannel consoleChannel
   IChannel gamingNewsChannel
 
+  boolean welcomeMessageEnabled = true
+
   def hasRole = { IUser user, String roleId ->
     guild.getRolesForUser(user).any { it.ID == roleId }
   }
@@ -145,11 +147,12 @@ greeb {
 
       guild.editUserRoles(user, (currentRoles + newRole) as IRole[])
 
-      mainChannel.sendMessage("""\
+      if (welcomeMessageEnabled) {
+        mainChannel.sendMessage("""\
         Sup <@!$user.ID>, you're now a Filthy Casual! ❤
         Make yourself at home, pick a `!regions` & find games `!LFG`. Give our <#195522076730195968> & <#211829950163058688> a quick read too. Stick around, events every weekend! <#162513993963929600> & URF next week
-      😃""".stripIndent())
-
+        😃""".stripIndent())
+      }
       console("<@!106136360892514304>: <@!$user.ID> has joined")
     }
 
@@ -193,6 +196,16 @@ greeb {
 
       client.getOrCreatePMChannel(user).sendMessage(message + regionBullets)
       console("<@!$user.ID> reset their region")
+    }
+
+    messageReceived(/!disableWelcomeMessage/, 'bot-console', isAdmin) {
+      welcomeMessageEnabled = false
+      console('welcome messagee disabled')
+    }
+
+    messageReceived(/!enableWelcomeMessage/, 'bot-console', isAdmin) {
+      welcomeMessageEnabled = true
+      console('welcome messagee enabled')
     }
 
     messageReceived(/(?i)^!createRegion ([A-Z]{2,5})$/, 'bot-console', isAdmin) { RegionDataService regionDs ->
@@ -251,7 +264,9 @@ greeb {
         • `!resetregion` - remove assigned region role
         • `!joinTeam(Instinct/Mystic/Valor)` - join the appropriate Pokemon Go channel
         * `!LFG` - get the looking for game role
-        * `!NLFG` - remove the looking for game flag'''.stripIndent())
+        * `!NLFG` - remove the looking for game flag
+        • `!houseStats` - Gives the number of points each house has
+        • `!mypoints` - Tells you how many points you have earned this season'''.stripIndent())
     }
 
     messageReceived(/(?i)^!help/, 'bot-console') {
@@ -262,16 +277,24 @@ greeb {
         • `!joinTeam(Instinct/Mystic/Valor)` - join the appropriate Pokemon Go channel
         * `!LFG` - get the looking for game role
         * `!NLFG` - remove the looking for game flag
+        • `!houseStats` - Gives the number of points each house has
+        • `!mypoints` - Tells you how many points you have earned this season
         -- admin commands (only work in bot-console)
         • `!createRegion [REGION]` - * creates a new region, can be 2-5 characters
         • `!deleteRegion [REGION]` - * deletes region
-        • `regionstats` - lists the number of users in each region
+        • `!regionstats` - lists the number of users in each region
         • `!banWords` - lists all words on the block list
         • `!addBanWord [WORD]` - adds word to block list. If that word appears in any message the message will be deleted
         • `!removeBanWord [WORD]` - removes word from block list
         • `!addFeed [FEED URL]` - * adds a new feed to RSS (currently only supports a small subset of feed formats)
         • `!listFeeds` - Lists all current feeds and their IDs
         • `!removeFeed [FEED ID]` - * removes an RSS feed
+        • `!enableWelcomeMessage` - * stops users being sent welcome messages, also stops house welcome messages
+        • `!disableWelcomeMessage` - * re-enables welcome messages
+        • `!houseMemberCount` - Gives the total number of members in each house
+        • `!assignUnhoused` - * Assigns any users without a house to a house
+        • `!honour @USER [POINTS] [REASON]` - Points will be awarded to the users house, can only be done by support
+        • `!dishonour` @USER [POINTS] [REASON]` - Points will be deducted to the users house, can only be done by support
 
         * Admin role only'''.stripIndent())
     }
@@ -388,10 +411,6 @@ greeb {
       respond(housePointService.houses.collect { house -> "${house.role.name} - ${house.points}" }.join('\n'))
     }
 
-    messageReceived({ true }) {
-      println content
-    }
-
     messageReceived(combine(messageMatches(/(?i)^!honou?r <@\d+> ?\d{1,5} .{5,}/), channelNameMatches('bot-console'), or(isSupport, isAdmin))) {
       HousePointService housePointService ->
         def receiver = guild.getUserByID(parts[1][2..-2])
@@ -400,8 +419,8 @@ greeb {
 
         House house = housePointService.honour(receiver, points, reason)
         if (house) {
-          console("${user.mention()} has awarded ${receiver.mention()}(${house.channel.mention()}) $points points because `$reason`")
-          house.channel.sendMessage("Contrats $house.role.name, ${receiver.mention()} has been Honoured and earned your House $points Points. Your House now has $house.points points. ")
+          console("${user.mention()} has awarded ${receiver.mention()}(${house.channel.mention()}) $points points because they're `$reason`")
+          house.channel.sendMessage("Contrats $house.role.name, ${receiver.mention()} has been Honoured because they're $reason and earned your House $points Points. Your House now has $house.points points.")
         } else {
           console("${receiver.mention()} is not a member of any house and therefore can't receive honour")
         }
@@ -423,6 +442,22 @@ greeb {
         }
     }
 
+    messageReceived(/(?i)!myPoints/) { HousePointService housePointService ->
+      Integer honour = housePointService.getHonour(user)
+      House house = housePointService.getHouse(user)
+
+      if (house) {
+        client.getOrCreatePMChannel(user).sendMessage("This season you have earned your house $honour points. Your house(${house.channel.mention()}) currently has $house.points points")
+      } else {
+        client.getOrCreatePMChannel(user).sendMessage("You are not currently a member of a house message Yo' Support and they will randomly assign you to one")
+      }
+    }
+
+    userLeave(all()) { HousePointService housePointService ->
+      println "$event.user.name($event.user.ID) left"
+      housePointService.userLeft(event.user)
+    }
+
     messageReceived(/(?i)^!assignUnhoused/, 'bot-console') { HousePointService housePointService ->
       def unassignedUsers = housePointService.unassignedUsers
 
@@ -437,7 +472,9 @@ greeb {
 
     userJoin(all()) { HousePointService housePointService ->
       House newHouse = housePointService.addUser(user)
-      newHouse.channel.sendMessage("<@!$newHouse.role.ID> - Please give a warm welcome your very new House member <@!$user.ID>!")
+      if (welcomeMessageEnabled) {
+        newHouse.channel.sendMessage("${newHouse.channel.mention()} - Please give a warm welcome your very new House member <@!$user.ID>!")
+      }
     }
 
   }
