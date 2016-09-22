@@ -437,8 +437,7 @@ greeb {
 
     userJoin(all()) { HousePointService housePointService ->
       House newHouse = housePointService.addUser(user)
-      mainChannel.sendMessage(
-              "<@!$newHouse.role.ID> - Please give a warm welcome your very new House member <@!$user.ID>! :grinning:")
+      newHouse.channel.sendMessage("<@!$newHouse.role.ID> - Please give a warm welcome your very new House member <@!$user.ID>!")
     }
 
   }
