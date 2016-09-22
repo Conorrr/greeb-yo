@@ -46,8 +46,18 @@ greeb {
     guild.getRolesForUser(user).any { it.ID == roleId }
   }
 
+  def or = { Closure<Boolean> c1, Closure<Boolean> c2 ->
+    return { MessageReceivedEvent event ->
+      return c1.call(event) || c2.call(event)
+    }
+  }
+
   def isAdmin = { MessageReceivedEvent event ->
     hasRole(event.message.author, properties.botAdminRoleID)
+  }
+
+  def isSupport = { MessageReceivedEvent event ->
+    hasRole(event.message.author, properties.supportRoleID)
   }
 
   bindings {
@@ -84,19 +94,19 @@ greeb {
           console("<@!$user.ID> joined region $newRole.name")
         } else {
           client.getOrCreatePMChannel(user).sendMessage(
-              "You are already assigned to $alreadyAssigned.name. If you wish to change region please use `!resetregion` if you wish to change your region use $regionBullets.")
+                  "You are already assigned to $alreadyAssigned.name. If you wish to change region please use `!resetregion` if you wish to change your region use $regionBullets.")
         }
       }
     }
 
     def listenForBanWord = { banWord ->
       messageReceived(combine(not(privateChat()), not(channelNameMatches('bot-console')),
-                              messageMatches(/(?i)(^|\s)$banWord(\s|$)/))) {
+              messageMatches(/(?i)(^|\s)$banWord(\s|$)/))) {
         // delete message
         message.delete()
         // pm the user
         client.getOrCreatePMChannel(user).sendMessage(
-            "your message `$content` has removed from <#$message.channel.ID>. If you think this is a mistake please contact Yo' Support")
+                "your message `$content` has removed from <#$message.channel.ID>. If you think this is a mistake please contact Yo' Support")
 
         // post a line to console
         console("message `$content` by <@$user.ID> removed from <#$message.channel.ID>")
@@ -175,10 +185,10 @@ greeb {
       if (currentRegion) {
         guild.editUserRoles(user, (currentRoles - currentRegion) as IRole[])
         message =
-            "Your region tag has been reset, To join a new region reply to this message with a region tag from the list below."
+                "Your region tag has been reset, To join a new region reply to this message with a region tag from the list below."
       } else {
         message =
-            "You aren't assigned to any regions. To join a region reply to this message with a region tag from the list below."
+                "You aren't assigned to any regions. To join a region reply to this message with a region tag from the list below."
       }
 
       client.getOrCreatePMChannel(user).sendMessage(message + regionBullets)
@@ -228,13 +238,13 @@ greeb {
       guild.getUsers().get(0).getRolesForGuild(guild)
 
       respond(guild.users
-                  .groupBy { it.getRolesForGuild(guild).find { role -> regions.containsKey(role.name) } ?: 'NONE' }
-                  .collect { region, users -> "• !$region - ${users.size()}" }
-                  .join('\n'))
+              .groupBy { it.getRolesForGuild(guild).find { role -> regions.containsKey(role.name) } ?: 'NONE' }
+              .collect { region, users -> "• !$region - ${users.size()}" }
+              .join('\n'))
     }
 
     messageReceived(
-        combine(messageMatches(/(?i)^!help/), { MessageReceivedEvent e -> e.message.channel.name != 'bot-console' })) {
+            combine(messageMatches(/(?i)^!help/), { MessageReceivedEvent e -> e.message.channel.name != 'bot-console' })) {
       respond('''\n\
         • `!ping` - check if the bot is working
         • `!regions` - get a list of regions
@@ -325,7 +335,7 @@ greeb {
         guild.editUserRoles(user, (currentRoles + newRole) as IRole[])
 
         guild.getChannelByID(teamSettings.channelId).
-            sendMessage("Team <@&${newRole.ID}>, You have a new Team Member! Welcome ${user.mention()}")
+                sendMessage("Team <@&${newRole.ID}>, You have a new Team Member! Welcome ${user.mention()}")
         console("<@!$user.ID> joined poketeam $teamName")
       }
     }
@@ -378,15 +388,39 @@ greeb {
       respond(housePointService.houses.collect { house -> "${house.role.name} - ${house.points}" }.join('\n'))
     }
 
-    // !honour <@!86725763428028416> -5 some reason
-    messageReceived(/(?i)^!honou?r <@!\d+> (-|\+)?\d{1,5} .{5,}/, 'bot-console') {
+    messageReceived({ true }) {
+      println content
+    }
+
+    messageReceived(combine(messageMatches(/(?i)^!honou?r <@\d+> ?\d{1,5} .{5,}/), channelNameMatches('bot-console'), or(isSupport, isAdmin))) {
       HousePointService housePointService ->
-        def receiver = guild.getUserByID(parts[1])
+        def receiver = guild.getUserByID(parts[1][2..-2])
         def points = parts[2].toInteger()
         def reason = parts[3..-1].join(' ')
 
         House house = housePointService.honour(receiver, points, reason)
-        console("${user.mention()} has awarded ${receiver.mention()}($house.role.name) $points points because `$reason`")
+        if (house) {
+          console("${user.mention()} has awarded ${receiver.mention()}(${house.channel.mention()}) $points points because `$reason`")
+          house.channel.sendMessage("Contrats $house.role.name, ${receiver.mention()} has been Honoured and earned your House $points Points. Your House now has $house.points points. ")
+        } else {
+          console("${receiver.mention()} is not a member of any house and therefore can't receive honour")
+        }
+    }
+
+    messageReceived(combine(messageMatches(/(?i)^!dishonou?r <@\d+> ?\d{1,5} .{5,}/), channelNameMatches('bot-console'), or(isSupport, isAdmin))) {
+      HousePointService housePointService ->
+        def receiver = guild.getUserByID(parts[1][2..-2])
+        def points = parts[2].toInteger()
+        def reason = parts[3..-1].join(' ')
+
+        House house = housePointService.honour(receiver, -points, reason)
+        if (house) {
+          console("${user.mention()} has removed ${receiver.mention()}(${house.channel.mention()}) $points points because `$reason`")
+          house.channel.sendMessage("$house.role.name, ${receiver.mention()} has broken House Rules and has been Dishonoured. $points have been deducted for your house. " +
+                  "Redemption is always possible, help your Housemate out, promote a welcoming enviroment, play games and have fun to earn those points back.")
+        } else {
+          console("${receiver.mention()} is not a member of any house and therefore can't receive dishonour")
+        }
     }
 
     messageReceived(/(?i)^!assignUnhoused/, 'bot-console') { HousePointService housePointService ->
@@ -404,7 +438,7 @@ greeb {
     userJoin(all()) { HousePointService housePointService ->
       House newHouse = housePointService.addUser(user)
       mainChannel.sendMessage(
-          "<@!$newHouse.role.ID> - Please give a warm welcome your very new House member <@!$user.ID>! :grinning:")
+              "<@!$newHouse.role.ID> - Please give a warm welcome your very new House member <@!$user.ID>! :grinning:")
     }
 
   }

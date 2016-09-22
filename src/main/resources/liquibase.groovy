@@ -86,6 +86,7 @@ databaseChangeLog {
         constraints(nullable: false)
       }
       column(name: 'house', type: 'int')
+      column(name: 'userId', type: 'varchar(20)')
       column(name: 'season', type: 'int')
       column(name: 'date', type: 'datetime')
       column(name: 'points', type: 'int')

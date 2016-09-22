@@ -25,15 +25,16 @@ class HousePointDataService {
     WHERE season.start < now()
     AND season.end > now()""").collect({
       int id = (int) it.get('id')
-      IRole role = guild.getRoleByID((String) it.get('roleid'))
-      IChannel channel = null // todo
+      IRole role = guild.getRoleByID((String) it.get('roleId'))
+      IChannel channel = guild.getChannelByID((String) it.get('channelId'))
       int points = (int) it.getProperty('points')
       new House(id, role, channel, points)
     })
   }
 
   void honour(House house, int points, String reason, IUser awardee) {
-    sql.execute("INSERT ")
+    sql.executeInsert("""INSERT INTO point_audit (house, userId, season, date, points, reason)
+    values ($house.id, $awardee.ID, (SELECT id FROM season WHERE start < now() AND end > now()), now(), $points, $reason)""")
   }
 
   // add points

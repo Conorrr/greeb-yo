@@ -59,12 +59,12 @@ class HousePointService {
    * returns null if the user does not belong to a house
    */
   House honour(IUser user, int points, String reason) {
-    House house = houseRoleUsers.find { k, v -> v.contains(user) }.key
+    House house = houseRoleUsers.find { k, v -> v.contains(user) }?.key
     if (house == null) {
       return null
     }
 
-    dataService.honour()
+    dataService.honour(house, points, reason, user)
 
     house.points += points
 
