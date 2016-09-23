@@ -150,7 +150,7 @@ greeb {
       if (welcomeMessageEnabled) {
         mainChannel.sendMessage("""\
         Sup <@!$user.ID>, you're now a Filthy Casual! ❤
-        Make yourself at home, pick a `!regions` & find games `!LFG`. Give our <#195522076730195968> & <#211829950163058688> a quick read too. Stick around, events every weekend! <#162513993963929600> & URF next week
+        Make yourself at home, pick a `!regions` & find games `!LFG`. Give our <#195522076730195968> & <#211829950163058688> a quick read too. Stick around, events every weekend! <#162513993963929600>
         😃""".stripIndent())
       }
       console("<@!106136360892514304>: <@!$user.ID> has joined")
