@@ -294,9 +294,24 @@ greeb {
         • `!houseMemberCount` - Gives the total number of members in each house
         • `!assignUnhoused` - * Assigns any users without a house to a house
         • `!honour @USER [POINTS] [REASON]` - Points will be awarded to the users house, can only be done by support
-        • `!dishonour` @USER [POINTS] [REASON]` - Points will be deducted to the users house, can only be done by support
+        • `!dishonour @USER [POINTS] [REASON]` - Points will be deducted to the users house, can only be done by support
+        • `!purge` - Removes all users without a region from the guild
 
         * Admin role only'''.stripIndent())
+    }
+
+    messageReceived(/(?i)^!purge$/, 'bot-console', isAdmin) {
+      // find users with no region
+      def toRemove = guild.users.findAll {u -> !(u.getRolesForGuild(guild).collect({r->r.ID}).intersect(regions.values()))}.findAll({u -> u.name != 'greeb'})
+
+      respond("${toRemove.size()} users with no region found, removing them...")
+
+      toRemove.each { removeUser ->
+        guild.kickUser(removeUser)
+        sleep(2000)
+      }
+
+      respond("All users with no region have been removed.")
     }
 
     messageReceived(/(?i)^!addBanWord [a-z]*$/, 'bot-console') { BanWordDataService banWordDs ->
