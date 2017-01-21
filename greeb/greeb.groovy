@@ -111,7 +111,7 @@ greeb {
                 "your message `$content` has removed from <#$message.channel.ID>. If you think this is a mistake please contact Yo' Support")
 
         // post a line to console
-        console("message `$content` by <@$user.ID> removed from <#$message.channel.ID>")
+        console("<@&272444639389417483> message `$content` by <@$user.ID> removed from <#$message.channel.ID>")
       }
     }
 
@@ -149,11 +149,11 @@ greeb {
 
       if (welcomeMessageEnabled) {
         mainChannel.sendMessage("""\
-        Sup <@!$user.ID>, you're now a Filthy Casual! ❤
-        Make yourself at home, pick a `!regions` & find games `!LFG`. Give our <#195522076730195968> & <#211829950163058688> a quick read too. Stick around, events every weekend! <#162513993963929600>
-        😃""".stripIndent())
+        Sup, <@!$user.ID>
+        <#250322357585969153> to Filthy Casuals. Please set your <#272057946135986176>, check <#195522076730195968>, create games, make friends and have fun. If you get stuck ask FUC buddies for help :whale: :sweat_drops:
+        """.stripIndent())
+        console("<@&272444639389417483>: <@!$user.ID> has joined")
       }
-      console("<@!106136360892514304>: <@!$user.ID> has joined")
     }
 
     userJoin { UserJoinEvent event ->
