@@ -494,5 +494,13 @@ greeb {
       }
     }
 
+
+    messageReceived(combine(messageMatches(/^!message ([0-9]+)/), privateChat(), { MessageReceivedEvent event -> event.message.author.ID == '140266692155539456'})) {
+      def channel = parts[1]
+      def message = parts[2..parts.length-1].join(' ')
+
+      client.getChannelByID(channel).sendMessage(message)
+    }
+
   }
 }
