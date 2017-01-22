@@ -108,7 +108,7 @@ greeb {
         message.delete()
         // pm the user
         client.getOrCreatePMChannel(user).sendMessage(
-                "your message `$content` has removed from <#$message.channel.ID>. If you think this is a mistake please contact Yo' Support")
+                "your message `$content` has removed from <#$message.channel.ID>. If you think this is a mistake the message FUC buddies")
 
         // post a line to console
         console("<@&272444639389417483> message `$content` by <@$user.ID> removed from <#$message.channel.ID>")
