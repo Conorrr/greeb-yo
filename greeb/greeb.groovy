@@ -314,8 +314,8 @@ greeb {
       respond("All users with no region have been removed.")
     }
 
-    messageReceived(/(?i)^!addBanWord [a-z]*$/, 'bot-console') { BanWordDataService banWordDs ->
-      String banWord = parts[1]
+    messageReceived(/(?i)^!addBanWord .*$/, 'bot-console') { BanWordDataService banWordDs ->
+      String banWord = parts[1..parts.size()-1].join(' ')
 
       listenForBanWord(banWord)
 
