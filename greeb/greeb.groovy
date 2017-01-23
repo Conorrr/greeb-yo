@@ -323,8 +323,8 @@ greeb {
       respond("banword `$banWord` added to list")
     }
 
-    messageReceived(/(?i)^!removeBanWord [a-z]*$/, 'bot-console') { BanWordDataService banWordDs ->
-      String banWord = parts[1]
+    messageReceived(/(?i)^!removeBanWord .*$/, 'bot-console') { BanWordDataService banWordDs ->
+      String banWord = parts[1..parts.size()-1].join(' ')
 
       unregister(banWord)
 
