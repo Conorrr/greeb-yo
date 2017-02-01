@@ -191,11 +191,9 @@ greeb {
 
       if (currentRegion) {
         guild.editUserRoles(user, (currentRoles - currentRegion) as IRole[])
-        message =
-                "Your region tag has been reset, To join a new region reply to this message with a region tag from the list below."
+        message = "Your region tag has been reset, To join a new region reply to this message with a region from the list below."
       } else {
-        message =
-                "You aren't assigned to any regions. To join a region reply to this message with a region tag from the list below."
+        message = "You aren't assigned to any regions. To join a region reply to this message with a region from the list below."
       }
 
       client.getOrCreatePMChannel(user).sendMessage(message + regionBullets)
