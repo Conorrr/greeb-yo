@@ -91,7 +91,10 @@ greeb {
         if (!alreadyAssigned) {
           def newRole = guild.getRoles().find { it.name == regionName.toUpperCase() }
           guild.editUserRoles(user, (currentRoles + newRole) as IRole[])
-          client.getOrCreatePMChannel(user).sendMessage("You are now assigned to `$regionName`")
+
+          IChannel regionChannel = guild.getChannelsByName("lfg_${regionName.toLowerCase()}").get(0)
+
+          client.getOrCreatePMChannel(user).sendMessage("Your region is now set to `$regionName`, feel free to use ${regionChannel.mention()} to look for others Lookng For Games")
           console("<@!$user.ID> joined region $newRole.name")
         } else {
           client.getOrCreatePMChannel(user).sendMessage(
@@ -101,10 +104,12 @@ greeb {
     }
 
     def listenForBanWord = { banWord ->
-      messageReceived(combine(not(privateChat()), not(channelNameMatches('bot-console')), not({cleanChannelIds.contains(it.message.channel.ID)}),
+      messageReceived(combine(not(privateChat()), not(channelNameMatches('bot-console')),
               messageMatches(/(?i)(^|\s)$banWord(\s|$)/))) {
-        // delete message
-        message.delete()
+        if (!cleanChannelIds.contains(message.channel.ID)) {
+          // delete message
+          message.delete()
+        }
         // pm the user
         client.getOrCreatePMChannel(user).sendMessage(
                 "your message `$content` has removed from <#$message.channel.ID>. If you think this is a mistake the message FUC buddies")
