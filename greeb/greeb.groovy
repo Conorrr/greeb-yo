@@ -29,9 +29,8 @@ greeb {
   String mainChannelId = properties.mainChannelId
   String consoleChannelId = properties.consoleChannelId
   String gamingNewsChannelId = properties.gamingNewsChannelId
+  List<String> cleanChannelIds = properties.cleanChannelIds
   List<String> autoBanNames = properties.autoBanNames
-
-  Map<String, Map<String, String>> pokeTeams = properties.pokemon
 
   Map<String, String> regions
   List<String> banWords
@@ -102,7 +101,7 @@ greeb {
     }
 
     def listenForBanWord = { banWord ->
-      messageReceived(combine(not(privateChat()), not(channelNameMatches('bot-console')),
+      messageReceived(combine(not(privateChat()), not(channelNameMatches('bot-console')), not({cleanChannelIds.contains(it.message.channel.ID)}),
               messageMatches(/(?i)(^|\s)$banWord(\s|$)/))) {
         // delete message
         message.delete()
@@ -152,8 +151,8 @@ greeb {
         Sup, <@!$user.ID>
         <#250322357585969153> to Filthy Casuals. Please set your <#272057946135986176>, check <#195522076730195968>, create games, make friends and have fun. If you get stuck ask FUC buddies for help :whale: :sweat_drops:
         """.stripIndent())
-        console("<@&272444639389417483>: <@!$user.ID> has joined")
       }
+      console("<@&272444639389417483>: <@!$user.ID> has joined")
     }
 
     userJoin { UserJoinEvent event ->
@@ -200,12 +199,12 @@ greeb {
 
     messageReceived(/!disableWelcomeMessage/, 'bot-console', isAdmin) {
       welcomeMessageEnabled = false
-      console('welcome messagee disabled')
+      console('welcome message disabled')
     }
 
     messageReceived(/!enableWelcomeMessage/, 'bot-console', isAdmin) {
       welcomeMessageEnabled = true
-      console('welcome messagee enabled')
+      console('welcome message enabled')
     }
 
     messageReceived(/(?i)^!createRegion ([A-Z]{2,5})$/, 'bot-console', isAdmin) { RegionDataService regionDs ->
@@ -257,12 +256,11 @@ greeb {
     }
 
     messageReceived(
-            combine(messageMatches(/(?i)^!help/), { MessageReceivedEvent e -> e.message.channel.name != 'bot-console' })) {
+            combine(messageMatches(/(?i)^!help/), { MessageReceivedEvent e -> e.message.channel.name != 'bot-console' && !cleanChannelIds.contains(e.message.channel.ID) })) {
       respond('''\n\
         • `!ping` - check if the bot is working
         • `!regions` - get a list of regions
         • `!resetregion` - remove assigned region role
-        • `!joinTeam(Instinct/Mystic/Valor)` - join the appropriate Pokemon Go channel
         * `!LFG` - get the looking for game role
         * `!NLFG` - remove the looking for game flag
         • `!houseStats` - Gives the number of points each house has
@@ -274,7 +272,6 @@ greeb {
         • `!ping` - check if the bot is working
         • `!regions` - get a list of regions
         • `!resetregion` - remove assigned region role
-        • `!joinTeam(Instinct/Mystic/Valor)` - join the appropriate Pokemon Go channel
         * `!LFG` - get the looking for game role
         * `!NLFG` - remove the looking for game flag
         • `!houseStats` - Gives the number of points each house has
@@ -359,23 +356,6 @@ greeb {
       rssDS.delete(feedId)
 
       respond("Removed feed: `$feedId`")
-    }
-
-    pokeTeams.each { teamName, teamSettings ->
-      messageReceived(/(?i)!joinTeam$teamName$/) {
-        if (properties.pokemon.collect { (String) it.value.roleId }.any { hasRole(user, it) }) {
-          return client.getOrCreatePMChannel(user).sendMessage('You are already a member of a pokemon team')
-        }
-
-        def newRole = guild.getRoleByID(teamSettings.roleId)
-
-        List<IRole> currentRoles = user.getRolesForGuild(guild)
-        guild.editUserRoles(user, (currentRoles + newRole) as IRole[])
-
-        guild.getChannelByID(teamSettings.channelId).
-                sendMessage("Team <@&${newRole.ID}>, You have a new Team Member! Welcome ${user.mention()}")
-        console("<@!$user.ID> joined poketeam $teamName")
-      }
     }
 
     messageReceived(/(?i)!lfg/) {
@@ -500,6 +480,12 @@ greeb {
       def message = parts[2..parts.length-1].join(' ')
 
       client.getChannelByID(channel).sendMessage(message)
+    }
+
+    cleanChannelIds.each {
+      messageReceived(channelMatches(it)) {
+        message.delete()
+      }
     }
 
   }

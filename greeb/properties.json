@@ -5,24 +5,14 @@
   "gamingNewsChannelId": "209298844704309248",
   "botAdminRoleID": "211822822811500544",
   "supportRoleID": "228493204801060866",
+  "cleanChannelIds": [
+    "199590758079135746",
+    "276473196327206912"
+  ],
   "db": {
     "username": "greeb",
     "password": "uqRjordlyF06IQnYBkcm",
     "location": "~/greebdb"
-  },
-  "pokemon": {
-    "mystic": {
-      "roleId": "211800618287890432",
-      "channelId": "211996300927827969"
-    },
-    "valor": {
-      "roleId": "211800633550962688",
-      "channelId": "211996365339885571"
-    },
-    "instinct": {
-      "roleId": "211800576671875072",
-      "channelId": "211996115808026624"
-    }
   },
   "autoBanNames": [
     "Nicholas Federov",
