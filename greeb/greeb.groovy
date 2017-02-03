@@ -101,6 +101,36 @@ greeb {
                   "You are already assigned to $alreadyAssigned.name. If you wish to change region please use `!resetregion` if you wish to change your region use $regionBullets.")
         }
       }
+
+      reactionAdd({ e -> cleanChannelIds.contains(e.message.channel.ID) && e.reaction.toString().toLowerCase().contains(regionName.toLowerCase()) }) {
+        List<IRole> currentRoles = user.getRolesForGuild(guild)
+
+        def alreadyAssigned = currentRoles.find { regions.keySet().contains(it.name) }
+
+        if (!alreadyAssigned) {
+          def newRole = guild.getRoles().find { it.name == regionName.toUpperCase() }
+          guild.editUserRoles(user, (currentRoles + newRole) as IRole[])
+
+          IChannel regionChannel = guild.getChannelsByName("lfg_${regionName.toLowerCase()}").get(0)
+
+          client.getOrCreatePMChannel(user).sendMessage("Your region is now set to `$regionName`, feel free to use ${regionChannel.mention()} to look for others Lookng For Games")
+          console("<@!$user.ID> joined region $newRole.name")
+        }
+      }
+
+      reactionRemove({ e -> cleanChannelIds.contains(e.message.channel.ID) && e.reaction.toString().toLowerCase().contains(regionName.toLowerCase()) }) {
+        List<IRole> currentRoles = user.getRolesForGuild(guild)
+
+        def currentRegion = currentRoles.find { regionName == it.name }
+
+        if (currentRegion) {
+          guild.editUserRoles(user, (currentRoles - currentRegion) as IRole[])
+
+          client.getOrCreatePMChannel(user).sendMessage("Your region tag has been reset.")
+          console("<@!$user.ID> reset their region")
+        }
+      }
+
     }
 
     def listenForBanWord = { banWord ->
@@ -302,7 +332,7 @@ greeb {
 
     messageReceived(/(?i)^!purge$/, 'bot-console', isAdmin) {
       // find users with no region
-      def toRemove = guild.users.findAll {u -> !(u.getRolesForGuild(guild).collect({r->r.ID}).intersect(regions.values()))}.findAll({u -> u.name != 'greeb'})
+      def toRemove = guild.users.findAll { u -> !(u.getRolesForGuild(guild).collect({ r -> r.ID }).intersect(regions.values())) }.findAll({ u -> u.name != 'greeb' })
 
       respond("${toRemove.size()} users with no region found, removing them...")
 
@@ -315,7 +345,7 @@ greeb {
     }
 
     messageReceived(/(?i)^!addBanWord .*$/, 'bot-console') { BanWordDataService banWordDs ->
-      String banWord = parts[1..parts.size()-1].join(' ')
+      String banWord = parts[1..parts.size() - 1].join(' ')
 
       listenForBanWord(banWord)
 
@@ -324,7 +354,7 @@ greeb {
     }
 
     messageReceived(/(?i)^!removeBanWord .*$/, 'bot-console') { BanWordDataService banWordDs ->
-      String banWord = parts[1..parts.size()-1].join(' ')
+      String banWord = parts[1..parts.size() - 1].join(' ')
 
       unregister(banWord)
 
@@ -478,9 +508,9 @@ greeb {
     }
 
 
-    messageReceived(combine(messageMatches(/^!message ([0-9]+)/), privateChat(), { MessageReceivedEvent event -> event.message.author.ID == '140266692155539456'})) {
+    messageReceived(combine(messageMatches(/^!message ([0-9]+)/), privateChat(), { MessageReceivedEvent event -> event.message.author.ID == '140266692155539456' })) {
       def channel = parts[1]
-      def message = parts[2..parts.length-1].join(' ')
+      def message = parts[2..parts.length - 1].join(' ')
 
       client.getChannelByID(channel).sendMessage(message)
     }
