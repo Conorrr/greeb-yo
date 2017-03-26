@@ -154,7 +154,7 @@ greeb {
       if (welcomeMessageEnabled) {
         mainChannel.sendMessage("""\
         Sup, <@!$user.ID>
-        <#250322357585969153> to Filthy Casuals. Please set your <#272057946135986176>, check <#195522076730195968>, create games, make friends and have fun. If you get stuck ask FUC buddies for help :whale: :sweat_drops:
+        <#250322357585969153> to Filthy Casuals. Please go to <#272057946135986176> to select your region and unlock all the (voice) channels, so you can make friends and have fun! If you get stuck ask FUC buddies for help :whale: :sweat_drops:
         """.stripIndent())
       }
       console("<@&272444639389417483>: <@!$user.ID> has joined")
